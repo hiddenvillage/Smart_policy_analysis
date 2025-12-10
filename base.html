@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对公保单解读与智配系统</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入ECharts可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#4080FF',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        neutral: '#F5F7FA',
+                        dark: '#1D2129',
+                        light: '#E8F3FF',
+                        diff: '#722ED1' // 差异化标注色
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Microsoft YaHei', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .sidebar-item-active {
+                @apply bg-light text-primary font-medium;
+            }
+            .card-shadow {
+                box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+            }
+            .upload-hover {
+                transition: all 0.3s ease;
+            }
+            .upload-hover:hover {
+                border-color: theme('colors.primary');
+                background-color: theme('colors.light');
+            }
+            .diff-highlight {
+                @apply bg-diff/10 text-diff border border-diff/30 rounded px-1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-neutral font-sans h-screen flex flex-col overflow-hidden">
+    <!-- 顶部导航栏 -->
+    <header class="bg-primary text-white h-15 flex items-center px-6 shadow-md z-10">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-shield-halved text-2xl"></i>
+            <h1 class="text-xl font-bold">对公保单解读与智配系统 V1.0</h1>
+        </div>
+        <div class="flex items-center ml-auto gap-6">
+            <div class="relative cursor-pointer hover:text-light transition-colors">
+                <i class="fa-solid fa-bell text-lg"></i>
+                <span class="absolute -top-1 -right-1 w-4 h-4 bg-danger rounded-full text-xs flex items-center justify-center">2</span>
+            </div>
+            <div class="cursor-pointer hover:text-light transition-colors">
+                <i class="fa-solid fa-question-circle mr-1"></i>
+                <span>帮助中心</span>
+            </div>
+            <div class="flex items-center gap-2 cursor-pointer hover:text-light transition-colors">
+                <img src="https://picsum.photos/36/36" alt="用户头像" class="w-9 h-9 rounded-full border-2 border-white">
+                <span class="font-medium">系统管理员</span>
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体内容：侧边栏 + 主内容区 -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- 左侧侧边栏 -->
+        <aside class="w-60 bg-white h-full shadow-md flex flex-col">
+            <div class="p-4 text-dark font-semibold text-lg border-b border-gray-200">功能导航</div>
+            <nav class="flex-1 py-2">
+                <ul>
+                    <!-- 场景选择 -->
+                    <li class="sidebar-item-active mx-2 my-1 rounded-md h-12 flex items-center px-4 cursor-pointer transition-all" data-target="scene-page">
+                        <i class="fa-solid fa-layer-group w-6 text-center mr-3"></i>
+                        <span>场景选择</span>
+                    </li>
+                    <!-- 创建任务 -->
+                    <li class="mx-2 my-1 rounded-md h-12 flex items-center px-4 cursor-pointer transition-all hover:bg-gray-100" data-target="create-task-page">
+                        <i class="fa-solid fa-plus-circle w-6 text-center mr-3"></i>
+                        <span>创建任务</span>
+                    </li>
+                    <!-- 任务列表 -->
+                    <li class="mx-2 my-1 rounded-md h-12 flex items-center px-4 cursor-pointer transition-all hover:bg-gray-100" data-target="task-list-page">
+                        <i class="fa-solid fa-list-check w-6 text-center mr-3"></i>
+                        <span>任务列表</span>
+                    </li>
+                    <!-- 数据飞轮（BadCase分析） -->
+                    <li class="mx-2 my-1 rounded-md h-12 flex items-center px-4 cursor-pointer transition-all hover:bg-gray-100" data-target="data-flywheel-page">
+                        <i class="fa-solid fa-chart-line w-6 text-center mr-3"></i>
+                        <span>数据飞轮（BadCase分析）</span>
+                    </li>
+                </ul>
+            </nav>
+            <div class="p-4 text-xs text-gray-500 border-t border-gray-200">
+                <p>系统版本：V1.0.0</p>
+                <p>数据更新：2025-12-09</p>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 overflow-y-auto bg-neutral p-6">
+            <!-- 场景选择页面 -->
+            <div id="scene-page" class="page-content">
+                <div class="mb-6">
+                    <h2 class="text-[clamp(1.25rem,2vw,1.5rem)] font-bold text-dark">保单智配场景选择</h2>
+                    <p class="text-gray-500 mt-1">请选择对应的对公保单场景，快速启动智能解读与配置</p>
+                </div>
+
+                <!-- 场景卡片网格 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 团健险解读与智配 -->
+                    <div class="bg-white rounded-lg card-shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" data-scene="团健险解读与智配">
+                        <div class="w-12 h-12 bg-light rounded-full flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-heart-pulse text-primary text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-dark mb-2">团健险解读与智配</h3>
+                        <p class="text-gray-500 text-sm mb-4">覆盖团体健康险、补充医疗，智能解读医疗条款，自动配置理赔规则</p>
+                        <button class="w-full bg-primary text-white py-2 rounded-md hover:bg-secondary transition-colors scene-btn">
+                            立即使用
+                        </button>
+                    </div>
+
+                    <!-- 团寿险解读与智配 -->
+                    <div class="bg-white rounded-lg card-shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" data-scene="团寿险解读与智配">
+                        <div class="w-12 h-12 bg-light rounded-full flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-user-tie text-primary text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-dark mb-2">团寿险解读与智配</h3>
+                        <p class="text-gray-500 text-sm mb-4">覆盖团体寿险、定期寿险，解析被保人信息，自动配置承保规则</p>
+                        <button class="w-full bg-primary text-white py-2 rounded-md hover:bg-secondary transition-colors scene-btn">
+                            立即使用
+                        </button>
+                    </div>
+
+                    <!-- 团产险解读与智配 -->
+                    <div class="bg-white rounded-lg card-shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" data-scene="团产险解读与智配">
+                        <div class="w-12 h-12 bg-light rounded-full flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-industry text-primary text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-dark mb-2">团产险解读与智配</h3>
+                        <p class="text-gray-500 text-sm mb-4">覆盖企业财产险、工程团险，拆解特约条款，自动配置风控规则</p>
+                        <button class="w-full bg-primary text-white py-2 rounded-md hover:bg-secondary transition-colors scene-btn">
+                            立即使用
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 创建任务页面 -->
+            <div id="create-task-page" class="page-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-[clamp(1.25rem,2vw,1.5rem)] font-bold text-dark">创建智配任务</h2>
+                    <p class="text-gray-500 mt-1">填写任务信息并上传保单文件，启动智能解读与系统配置</p>
+                </div>
+
+                <div class="bg-white rounded-lg card-shadow p-6">
+                    <!-- 任务基础信息 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">任务名称 <span class="text-danger">*</span></label>
+                            <input type="text" id="task-name" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="团健险智配_20251209_001" placeholder="请输入任务名称">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">所属企业 <span class="text-danger">*</span></label>
+                            <select id="task-company" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                                <option value="">请选择企业</option>
+                                <option value="1" selected>北京某科技有限公司</option>
+                                <option value="2">上海某贸易有限公司</option>
+                                <option value="3">广州某制造有限公司</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">智配场景 <span class="text-danger">*</span></label>
+                            <select id="task-scene" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                                <option value="团健险解读与智配" selected>团健险解读与智配</option>
+                                <option value="团寿险解读与智配">团寿险解读与智配</option>
+                                <option value="团产险解读与智配">团产险解读与智配</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 文件上传 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">保单文件上传 <span class="text-danger">*</span></label>
+                        <!-- 上传区域 -->
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center upload-hover mb-4">
+                            <input type="file" id="file-upload" class="hidden" accept=".pdf,.doc,.docx,.jpg,.png">
+                            <label for="file-upload" class="cursor-pointer">
+                                <div class="flex flex-col items-center gap-3">
+                                    <i class="fa-solid fa-file-invoice text-5xl text-gray-400"></i>
+                                    <p class="text-gray-600">点击上传或拖拽文件至此处</p>
+                                    <p class="text-xs text-gray-400">支持格式：PDF、Word、JPG、PNG（单文件≤50MB）</p>
+                                    <button class="bg-primary text-white px-4 py-2 rounded-md hover:bg-secondary transition-colors">
+                                        选择文件
+                                    </button>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- 上传进度条 -->
+                        <div id="upload-progress" class="hidden mb-4">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span id="upload-filename" class="text-gray-700">某企业团健险保单2025.pdf</span>
+                                <span id="upload-percent" class="text-primary">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="upload-bar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 已上传文件列表 -->
+                        <div id="file-list" class="hidden">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">已上传文件</h3>
+                            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <i class="fa-solid fa-file-pdf text-danger text-xl"></i>
+                                    <div>
+                                        <p class="text-sm text-gray-800" id="uploaded-filename">某企业团健险保单2025.pdf</p>
+                                        <p class="text-xs text-gray-500">大小：2.4MB | 上传完成</p>
+                                    </div>
+                                </div>
+                                <button id="remove-file" class="text-gray-400 hover:text-danger transition-colors">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="flex justify-end gap-3">
+                        <button id="reset-task" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">重置</button>
+                        <button id="start-task" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-secondary transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>启动任务</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 任务列表页面 -->
+            <div id="task-list-page" class="page-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-[clamp(1.25rem,2vw,1.5rem)] font-bold text-dark">智配任务列表</h2>
+                    <p class="text-gray-500 mt-1">查看所有任务状态，支持编辑、查看详情、导出结果等操作</p>
+                </div>
+
+                <!-- 筛选栏 -->
+                <div class="bg-white rounded-lg card-shadow p-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-700 mb-1">任务状态</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                <option value="all">全部</option>
+                                <option value="pending">待处理</option>
+                                <option value="processing">处理中</option>
+                                <option value="success">处理成功</option>
+                                <option value="failed">处理失败</option>
+                                <option value="badcase">BadCase</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-700 mb-1">创建时间</label>
+                            <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-700 mb-1">所属企业</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                <option value="">全部</option>
+                                <option value="1">北京某科技有限公司</option>
+                                <option value="2">上海某贸易有限公司</option>
+                                <option value="3">广州某制造有限公司</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-700 mb-1">场景类型</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                <option value="">全部</option>
+                                <option value="团健险解读与智配">团健险解读与智配</option>
+                                <option value="团寿险解读与智配">团寿险解读与智配</option>
+                                <option value="团产险解读与智配">团产险解读与智配</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 mt-4">
+                        <button class="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">重置</button>
+                        <button class="px-3 py-1 bg-primary text-white rounded-md text-sm hover:bg-secondary">查询</button>
+                    </div>
+                </div>
+
+                <!-- 任务表格 -->
+                <div class="bg-white rounded-lg card-shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-neutral">
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">任务ID</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">任务名称</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">所属企业</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">场景</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">处理进度</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">创建时间</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">BadCase标记</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">详细操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4 text-gray-800">T20251209001</td>
+                                    <td class="py-3 px-4 text-gray-800">团健险智配_20251209_001</td>
+                                    <td class="py-3 px-4 text-gray-800">北京某科技有限公司</td>
+                                    <td class="py-3 px-4 text-gray-800">团健险解读与智配</td>
+                                    <td class="py-3 px-4">
+                                        <div class="w-24 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-success h-2 rounded-full" style="width: 100%"></div>
+                                        </div>
+                                        <span class="text-success text-xs mt-1 inline-block">100% 成功</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600">2025-12-09 10:23</td>
+                                    <td class="py-3 px-4"><span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">无</span></td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex gap-2">
+                                            <button class="text-primary text-xs hover:underline edit-task" data-taskid="T20251209001">编辑</button>
+                                            <button class="text-gray-600 text-xs hover:underline">查看详情</button>
+                                            <button class="text-gray-600 text-xs hover:underline">导出结果</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 bg-danger/5">
+                                    <td class="py-3 px-4 text-gray-800">T20251209002</td>
+                                    <td class="py-3 px-4 text-gray-800">团寿险智配_20251209_002</td>
+                                    <td class="py-3 px-4 text-gray-800">上海某贸易有限公司</td>
+                                    <td class="py-3 px-4 text-gray-800">团寿险解读与智配</td>
+                                    <td class="py-3 px-4">
+                                        <div class="w-24 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-warning h-2 rounded-full" style="width: 85%"></div>
+                                        </div>
+                                        <span class="text-warning text-xs mt-1 inline-block">85% 处理中</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600">2025-12-09 09:15</td>
+                                    <td class="py-3 px-4"><span class="text-xs bg-danger/10 text-danger px-2 py-1 rounded">是</span></td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex gap-2">
+                                            <button class="text-primary text-xs hover:underline edit-task" data-taskid="T20251209002">编辑</button>
+                                            <button class="text-gray-600 text-xs hover:underline">查看详情</button>
+                                            <button class="text-gray-400 text-xs cursor-not-allowed">导出结果</button>
+                                            <button class="text-diff text-xs hover:underline badcase-analyze" data-taskid="T20251209002">分析差异</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 bg-danger/5">
+                                    <td class="py-3 px-4 text-gray-800">T20251209003</td>
+                                    <td class="py-3 px-4 text-gray-800">团产险智配_20251209_003</td>
+                                    <td class="py-3 px-4 text-gray-800">广州某制造有限公司</td>
+                                    <td class="py-3 px-4 text-gray-800">团产险解读与智配</td>
+                                    <td class="py-3 px-4">
+                                        <div class="w-24 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-danger h-2 rounded-full" style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-danger text-xs mt-1 inline-block">0% 失败</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600">2025-12-09 08:40</td>
+                                    <td class="py-3 px-4"><span class="text-xs bg-danger/10 text-danger px-2 py-1 rounded">是</span></td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex gap-2">
+                                            <button class="text-primary text-xs hover:underline edit-task" data-taskid="T20251209003">编辑</button>
+                                            <button class="text-gray-600 text-xs hover:underline">查看详情</button>
+                                            <button class="text-gray-400 text-xs cursor-not-allowed">导出结果</button>
+                                            <button class="text-diff text-xs hover:underline badcase-analyze" data-taskid="T20251209003">分析差异</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- 分页 -->
+                    <div class="px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                        <div class="text-sm text-gray-700">共 12 条记录，当前第 1 页</div>
+                        <div class="flex gap-2">
+                            <button class="w-8 h-8 border border-gray-300 rounded flex items-center justify-center text-gray-500">«</button>
+                            <button class="w-8 h-8 border border-primary bg-primary text-white rounded flex items-center justify-center">1</button>
+                            <button class="w-8 h-8 border border-gray-300 rounded flex items-center justify-center text-gray-700">2</button>
+                            <button class="w-8 h-8 border border-gray-300 rounded flex items-center justify-center text-gray-700">3</button>
+                            <button class="w-8 h-8 border border-gray-300 rounded flex items-center justify-center text-gray-500">»</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配置系统页面 -->
+            <div id="config-system-page" class="page-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-[clamp(1.25rem,2vw,1.5rem)] font-bold text-dark">任务配置 - <span id="config-taskid" class="text-primary">T20251209001</span></h2>
+                    <p class="text-gray-500 mt-1">配置系统字段（Key为固定值，Value为自动配置字段）</p>
+                </div>
+
+                <div class="bg-white rounded-lg card-shadow p-6">
+                    <!-- 配置说明 -->
+                    <div class="bg-light p-4 rounded-md mb-6">
+                        <p class="text-sm text-gray-700"><i class="fa-solid fa-info-circle text-primary mr-2"></i> 以下Key为系统固定字段，Value将根据保单解读结果自动配置，也可手动修改</p>
+                    </div>
+
+                    <!-- Key-Value配置表格 -->
+                    <div class="overflow-x-auto mb-6">
+                        <table class="w-full text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-neutral">
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium border border-gray-200 w-1/3">配置Key</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium border border-gray-200 w-2/3">配置Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">policy_code</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="BJ-TJK-20251209001" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">company_name</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="北京某科技有限公司" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">insured_count</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="500人" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">premium_amount</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="¥250,000.00" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">coverage_scope</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="门诊医疗、住院医疗、重疾保障" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">effective_date</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="2025-12-10" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">expire_date</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="2026-12-09" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border border-gray-200 font-medium">claim_threshold</td>
+                                    <td class="py-3 px-4 border border-gray-200">
+                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" value="¥500.00">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="flex justify-end gap-3">
+                        <button id="back-task-list" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">返回列表</button>
+                        <button id="save-config" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-secondary transition-colors">保存配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BadCase差异分析弹窗（隐藏） -->
+            <div id="badcase-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-lg card-shadow w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-dark">BadCase差异分析 - <span id="modal-taskid" class="text-primary">T20251209002</span></h3>
+                        <button id="close-modal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fa-solid fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <!-- 差异分析概览 -->
+                        <div class="bg-light p-4 rounded-md mb-6">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-triangle-exclamation text-warning text-lg"></i>
+                                <h4 class="font-medium text-dark">差异分析概览</h4>
+                            </div>
+                            <p class="text-sm text-gray-700">本次AI自动解读配置与人工标注内容共发现 <span class="text-danger font-medium">5</span> 处关键差异，其中 <span class="text-danger font-medium">2</span> 处为核心规则差异，<span class="text-warning font-medium">3</span> 处为字段精度差异。</p>
+                        </div>
+
+                        <!-- AI vs 人工对比表格 -->
+                        <div class="overflow-x-auto mb-6">
+                            <table class="w-full text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-neutral">
+                                        <th class="text-left py-3 px-4 text-gray-700 font-medium border border-gray-200 w-1/4">配置Key</th>
+                                        <th class="text-left py-3 px-4 text-gray-700 font-medium border border-gray-200 w-2/5">AI自动解读配置值</th>
+                                        <th class="text-left py-3 px-4 text-gray-700 font-medium border border-gray-200 w-2/5">人工标注配置值</th>
+                                        <th class="text-left py-3 px-4 text-gray-700 font-medium border border-gray-200 w-1/5">差异类型</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-3 px-4 border border-gray-200 font-medium">insured_count</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="diff-highlight">480人</span>
+                                        </td>
+                                        <td class="py-3 px-4 border border-gray-200">500人</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="text-xs bg-warning/10 text-warning px-2 py-1 rounded">字段精度</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-3 px-4 border border-gray-200 font-medium">premium_amount</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="diff-highlight">¥240,000.00</span>
+                                        </td>
+                                        <td class="py-3 px-4 border border-gray-200">¥250,000.00</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="text-xs bg-warning/10 text-warning px-2 py-1 rounded">字段精度</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-3 px-4 border border-gray-200 font-medium">coverage_scope</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            门诊医疗、住院医疗<span class="diff-highlight">（不含重疾）</span>
+                                        </td>
+                                        <td class="py-3 px-4 border border-gray-200">门诊医疗、住院医疗、重疾保障</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="text-xs bg-danger/10 text-danger px-2 py-1 rounded">核心规则</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-3 px-4 border border-gray-200 font-medium">claim_threshold</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="diff-highlight">¥1000.00</span>
+                                        </td>
+                                        <td class="py-3 px-4 border border-gray-200">¥500.00</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="text-xs bg-danger/10 text-danger px-2 py-1 rounded">核心规则</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-3 px-4 border border-gray-200 font-medium">effective_date</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="diff-highlight">2025-12-15</span>
+                                        </td>
+                                        <td class="py-3 px-4 border border-gray-200">2025-12-10</td>
+                                        <td class="py-3 px-4 border border-gray-200">
+                                            <span class="text-xs bg-warning/10 text-warning px-2 py-1 rounded">字段精度</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 差异原因分析 -->
+                        <div class="mb-6">
+                            <h4 class="font-medium text-dark mb-2">差异原因分析</h4>
+                            <div class="bg-white border border-gray-200 rounded-md p-4 text-sm text-gray-700">
+                                <p class="mb-2"><strong>核心规则差异原因：</strong>AI未正确识别保单中「重疾保障包含范围」和「理赔起付线调整条款」的特殊约定，导致核心规则配置偏差。</p>
+                                <p class="mb-2"><strong>字段精度差异原因：</strong>AI对被保人数统计时未包含试用期员工，保费计算时未计入附加服务费，生效日期识别时未区分「保单签订日」和「保障生效日」。</p>
+                                <p><strong>优化建议：</strong>1. 补充重疾条款、理赔起付线相关训练数据；2. 优化被保人范围、保费构成、日期类型的识别规则；3. 增加人工复核节点。</p>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="flex justify-end gap-3">
+                            <button id="export-analysis" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">导出分析报告</button>
+                            <button id="confirm-analysis" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-secondary transition-colors">确认并关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据飞轮页面（重点BadCase分析） -->
+            <div id="data-flywheel-page" class="page-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-[clamp(1.25rem,2vw,1.5rem)] font-bold text-dark">数据飞轮 - BadCase分析</h2>
+                    <p class="text-gray-500 mt-1">可视化展示AI解读配置BadCase分布、差异类型及优化效果</p>
+                </div>
+
+                <!-- 核心指标卡片（新增BadCase指标） -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <!-- 累计处理任务数 -->
+                    <div class="bg-white rounded-lg card-shadow p-6">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">累计处理任务数</p>
+                                <h3 class="text-3xl font-bold text-dark mt-2">1,286</h3>
+                                <p class="text-success text-xs mt-2"><i class="fa-solid fa-arrow-up"></i> 同比提升 45.2%</p>
+                            </div>
+                            <div class="w-12 h-12 bg-light rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-file-invoice text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BadCase占比 -->
+                    <div class="bg-white rounded-lg card-shadow p-6">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">BadCase占比</p>
+                                <h3 class="text-3xl font-bold text-danger mt-2">8.7%</h3>
+                                <p class="text-danger text-xs mt-2"><i class="fa-solid fa-arrow-up"></i> 环比上升 1.2%</p>
+                            </div>
+                            <div class="w-12 h-12 bg-danger/10 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-triangle-exclamation text-danger text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 核心规则差异占比 -->
+                    <div class="bg-white rounded-lg card-shadow p-6">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">核心规则差异占比</p>
+                                <h3 class="text-3xl font-bold text-warning mt-2">32%</h3>
+                                <p class="text-warning text-xs mt-2">占所有BadCase比例</p>
+                            </div>
+                            <div class="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-scale-unbalanced-flip text-warning text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 优化后准确率提升 -->
+                    <div class="bg-white rounded-lg card-shadow p-6">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">优化后准确率提升</p>
+                                <h3 class="text-3xl font-bold text-success mt-2">5.8%</h3>
+                                <p class="text-success text-xs mt-2"><i class="fa-solid fa-arrow-up"></i> 本月优化效果</p>
+                            </div>
+                            <div class="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-arrow-trend-up text-success text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域（重点BadCase分析） -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- BadCase场景分布 -->
+                    <div class="bg-white rounded-lg card-shadow p-6">
+                        <h3 class="text-lg font-semibold text-dark mb-4">BadCase场景分布</h3>
+                        <div id="badcase-scene-chart" class="w-full h-80"></div>
+                    </div>
+
+                    <!-- 差异类型分布 -->
+                    <div class="bg-white rounded-lg card-shadow p-6">
+                        <h3 class="text-lg font-semibold text-dark mb-4">BadCase差异类型分布</h3>
+                        <div id="badcase-type-chart" class="w-full h-80"></div>
+                    </div>
+                </div>
+
+                <!-- AI vs 人工解读配置对比趋势 -->
+                <div class="bg-white rounded-lg card-shadow p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-dark mb-4">AI vs 人工解读配置准确率月度趋势</h3>
+                    <div id="accuracy-trend-chart" class="w-full h-80"></div>
+                </div>
+
+                <!-- BadCaseTop5及优化建议 -->
+                <div class="bg-white rounded-lg card-shadow p-6">
+                    <h3 class="text-lg font-semibold text-dark mb-4">BadCase Top5及优化建议</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-neutral">
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">BadCase类型</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">出现频次</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">影响场景</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-medium">优化建议</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4 text-gray-800 font-medium">重疾条款识别错误</td>
+                                    <td class="py-3 px-4 text-gray-800">42</td>
+                                    <td class="py-3 px-4 text-gray-800">团健险</td>
+                                    <td class="py-3 px-4 text-gray-800">补充重疾条款训练数据，增加关键词匹配规则</td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4 text-gray-800 font-medium">被保人数统计偏差</td>
+                                    <td class="py-3 px-4 text-gray-800">38</td>
+                                    <td class="py-3 px-4 text-gray-800">团寿险、团健险</td>
+                                    <td class="py-3 px-4 text-gray-800">优化人员类型识别规则，包含试用期/正式员工</td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4 text-gray-800 font-medium">保费计算错误</td>
+                                    <td class="py-3 px-4 text-gray-800">31</td>
+                                    <td class="py-3 px-4 text-gray-800">团产险、团寿险</td>
+                                    <td class="py-3 px-4 text-gray-800">增加附加费用识别规则，优化金额提取算法</td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4 text-gray-800 font-medium">生效日期识别偏差</td>
+                                    <td class="py-3 px-4 text-gray-800">25</td>
+                                    <td class="py-3 px-4 text-gray-800">全场景</td>
+                                    <td class="py-3 px-4 text-gray-800">区分保单签订日/保障生效日，增加日期类型标注</td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4 text-gray-800 font-medium">理赔起付线错误</td>
+                                    <td class="py-3 px-4 text-gray-800">18</td>
+                                    <td class="py-3 px-4 text-gray-800">团健险</td>
+                                    <td class="py-3 px-4 text-gray-800">强化起付线条款关键词识别，增加规则校验</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 交互逻辑脚本 -->
+    <script>
+        // 1. 基础导航切换
+        const sidebarItems = document.querySelectorAll('nav li');
+        const pageContents = document.querySelectorAll('.page-content');
+        
+        // 切换页面通用方法
+        function switchPage(targetId) {
+            pageContents.forEach(page => page.classList.add('hidden'));
+            document.getElementById(targetId).classList.remove('hidden');
+            sidebarItems.forEach(li => li.classList.remove('sidebar-item-active'));
+            sidebarItems.forEach(li => {
+                if (li.getAttribute('data-target') === targetId) {
+                    li.classList.add('sidebar-item-active');
+                }
+            });
+            // 数据飞轮页面初始化图表
+            if (targetId === 'data-flywheel-page') {
+                initBadCaseCharts();
+            }
+        }
+
+        // 侧边栏点击事件
+        sidebarItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const targetId = item.getAttribute('data-target');
+                switchPage(targetId);
+            });
+        });
+
+        // 2. 场景选择跳转
+        const sceneBtns = document.querySelectorAll('.scene-btn');
+        sceneBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sceneCard = btn.closest('[data-scene]');
+                const sceneName = sceneCard.getAttribute('data-scene');
+                switchPage('create-task-page');
+                const sceneSelect = document.getElementById('task-scene');
+                for (let i = 0; i < sceneSelect.options.length; i++) {
+                    if (sceneSelect.options[i].value === sceneName) {
+                        sceneSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+                const taskNameInput = document.getElementById('task-name');
+                const prefix = sceneName.replace('解读与智配', '智配');
+                taskNameInput.value = `${prefix}_${new Date().getFullYear()}${(new Date().getMonth()+1).toString().padStart(2,0)}${new Date().getDate().toString().padStart(2,0)}_001`;
+            });
+        });
+
+        // 3. 创建任务文件上传逻辑
+        const fileUpload = document.getElementById('file-upload');
+        const uploadProgress = document.getElementById('upload-progress');
+        const uploadBar = document.getElementById('upload-bar');
+        const uploadPercent = document.getElementById('upload-percent');
+        const uploadFilename = document.getElementById('upload-filename');
+        const fileList = document.getElementById('file-list');
+        const uploadedFilename = document.getElementById('uploaded-filename');
+        const startTaskBtn = document.getElementById('start-task');
+        const removeFileBtn = document.getElementById('remove-file');
+        const resetTaskBtn = document.getElementById('reset-task');
+
+        fileUpload.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                const fileName = file.name;
+                
+                uploadProgress.classList.remove('hidden');
+                uploadFilename.textContent = fileName;
+                uploadedFilename.textContent = fileName;
+                
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.floor(Math.random() * 10) + 5;
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(progressInterval);
+                        uploadProgress.classList.add('hidden');
+                        fileList.classList.remove('hidden');
+                        startTaskBtn.disabled = false;
+                    }
+                    uploadBar.style.width = `${progress}%`;
+                    uploadPercent.textContent = `${progress}%`;
+                }, 300);
+            }
+        });
+
+        removeFileBtn.addEventListener('click', function() {
+            fileList.classList.add('hidden');
+            fileUpload.value = '';
+            startTaskBtn.disabled = true;
+        });
+
+        resetTaskBtn.addEventListener('click', function() {
+            document.getElementById('task-name').value = '团健险智配_20251209_001';
+            document.getElementById('task-company').selectedIndex = 1;
+            document.getElementById('task-scene').selectedIndex = 0;
+            fileUpload.value = '';
+            uploadProgress.classList.add('hidden');
+            fileList.classList.add('hidden');
+            uploadBar.style.width = '0%';
+            uploadPercent.textContent = '0%';
+            startTaskBtn.disabled = true;
+        });
+
+        startTaskBtn.addEventListener('click', function() {
+            if (confirm('确认启动智配任务？任务启动后将自动进行保单解读与系统配置')) {
+                switchPage('task-list-page');
+                alert('任务已成功启动，可在任务列表查看处理进度！');
+            }
+        });
+
+        // 4. 任务列表编辑跳转
+        const editTaskBtns = document.querySelectorAll('.edit-task');
+        const configTaskId = document.getElementById('config-taskid');
+        const backTaskListBtn = document.getElementById('back-task-list');
+        const saveConfigBtn = document.getElementById('save-config');
+
+        editTaskBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const taskId = this.getAttribute('data-taskid');
+                switchPage('config-system-page');
+                configTaskId.textContent = taskId;
+            });
+        });
+
+        backTaskListBtn.addEventListener('click', function() {
+            switchPage('task-list-page');
+        });
+
+        saveConfigBtn.addEventListener('click', function() {
+            alert('配置已成功保存！');
+            switchPage('task-list-page');
+        });
+
+        // 5. BadCase差异分析弹窗逻辑
+        const badcaseAnalyzeBtns = document.querySelectorAll('.badcase-analyze');
+        const badcaseModal = document.getElementById('badcase-modal');
+        const modalTaskId = document.getElementById('modal-taskid');
+        const closeModalBtn = document.getElementById('close-modal');
+        const confirmAnalysisBtn = document.getElementById('confirm-analysis');
+        const exportAnalysisBtn = document.getElementById('export-analysis');
+
+        badcaseAnalyzeBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const taskId = this.getAttribute('data-taskid');
+                modalTaskId.textContent = taskId;
+                badcaseModal.classList.remove('hidden');
+                // 根据任务ID加载不同的差异数据（模拟）
+                if (taskId === 'T20251209003') {
+                    document.querySelector('#badcase-modal .text-danger.font-medium:first-of-type').textContent = '8';
+                    document.querySelector('#badcase-modal .text-danger.font-medium:nth-of-type(2)').textContent = '4';
+                    document.querySelector('#badcase-modal .text-warning.font-medium').textContent = '4';
+                }
+            });
+        });
+
+        closeModalBtn.addEventListener('click', function() {
+            badcaseModal.classList.add('hidden');
+        });
+
+        confirmAnalysisBtn.addEventListener('click', function() {
+            badcaseModal.classList.add('hidden');
+            alert('BadCase差异分析已确认！');
+        });
+
+        exportAnalysisBtn.addEventListener('click', function() {
+            alert('BadCase差异分析报告已导出！');
+        });
+
+        // 点击弹窗外层关闭
+        badcaseModal.addEventListener('click', function(e) {
+            if (e.target === badcaseModal) {
+                badcaseModal.classList.add('hidden');
+            }
+        });
+
+        // 6. BadCase分析图表初始化
+        function initBadCaseCharts() {
+            // 1. BadCase场景分布饼图
+            const badcaseSceneChart = echarts.init(document.getElementById('badcase-scene-chart'));
+            badcaseSceneChart.setOption({
+                tooltip: { trigger: 'item' },
+                legend: { top: '0%', left: 'center' },
+                series: [
+                    {
+                        name: 'BadCase数量',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: false,
+                            position: 'center'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 16,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        labelLine: { show: false },
+                        data: [
+                            { value: 45, name: '团健险' },
+                            { value: 28, name: '团寿险' },
+                            { value: 27, name: '团产险' }
+                        ],
+                        color: ['#F53F3F', '#FF7D00', '#165DFF']
+                    }
+                ]
+            });
+
+            // 2. BadCase差异类型分布柱状图
+            const badcaseTypeChart = echarts.init(document.getElementById('badcase-type-chart'));
+            badcaseTypeChart.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: ['核心规则差异', '字段精度差异', '格式解析错误', '条款理解偏差', '其他']
+                },
+                yAxis: { type: 'value', name: '数量' },
+                series: [
+                    {
+                        name: 'BadCase数量',
+                        type: 'bar',
+                        data: [32, 45, 12, 8, 3],
+                        itemStyle: {
+                            color: function(params) {
+                                const colorList = ['#F53F3F', '#FF7D00', '#165DFF', '#722ED1', '#86909C'];
+                                return colorList[params.dataIndex];
+                            }
+                        }
+                    }
+                ]
+            });
+
+            // 3. AI vs 人工准确率趋势图
+            const accuracyTrendChart = echarts.init(document.getElementById('accuracy-trend-chart'));
+            accuracyTrendChart.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['AI解读准确率', '人工标注准确率'] },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+                },
+                yAxis: { type: 'value', max: 100, min: 80, name: '准确率(%)' },
+                series: [
+                    {
+                        name: 'AI解读准确率',
+                        type: 'line',
+                        data: [85.2, 86.5, 87.1, 86.8, 88.2, 87.9, 89.1, 88.8, 89.5, 90.2, 89.8, 91.0],
+                        itemStyle: { color: '#165DFF' },
+                        markPoint: {
+                            data: [
+                                { type: 'max', name: '最大值' },
+                                { type: 'min', name: '最小值' }
+                            ]
+                        },
+                        markLine: {
+                            data: [
+                                { type: 'average', name: '平均值' }
+                            ]
+                        }
+                    },
+                    {
+                        name: '人工标注准确率',
+                        type: 'line',
+                        data: [98.5, 98.7, 98.6, 98.8, 98.7, 98.9, 98.8, 99.0, 98.9, 99.1, 99.0, 99.2],
+                        itemStyle: { color: '#00B42A' },
+                        markPoint: {
+                            data: [
+                                { type: 'max', name: '最大值' },
+                                { type: 'min', name: '最小值' }
+                            ]
+                        },
+                        markLine: {
+                            data: [
+                                { type: 'average', name: '平均值' }
+                            ]
+                        }
+                    }
+                ]
+            });
+
+            // 自适应窗口大小
+            window.addEventListener('resize', () => {
+                badcaseSceneChart.resize();
+                badcaseTypeChart.resize();
+                accuracyTrendChart.resize();
+            });
+        }
+    </script>
+</body>
+</html>
