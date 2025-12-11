@@ -5,12 +5,63 @@ Django settings for insurance_project project.
 from pathlib import Path
 import os
 import pymysql
+import configparser
 
 # Configure PyMySQL as MySQLdb
 pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 读取配置文件
+def get_db_config_for_django():
+    """从配置文件读取数据库配置用于Django"""
+    config = configparser.ConfigParser()
+    config_path = BASE_DIR / 'config.ini'
+    
+    # 如果配置文件不存在，使用默认配置
+    if not config_path.exists():
+        return {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'insurance_db',
+            'USER': 'root',
+            'PASSWORD': 'password',
+            'HOST': 'localhost',
+            'PORT': '3306',
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            }
+        }
+    
+    try:
+        config.read(config_path, encoding='utf-8')
+        db_section = config['database']
+        
+        return {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': db_section.get('database', 'insurance_db'),
+            'USER': db_section.get('user', 'root'),
+            'PASSWORD': db_section.get('password', 'password'),
+            'HOST': db_section.get('host', 'localhost'),
+            'PORT': db_section.get('port', '3306'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'charset': db_section.get('charset', 'utf8mb4'),
+            }
+        }
+    except Exception as e:
+        # 如果读取失败，使用默认配置
+        return {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'insurance_db',
+            'USER': 'root',
+            'PASSWORD': 'password',
+            'HOST': 'localhost',
+            'PORT': '3306',
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            }
+        }
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-your-secret-key-change-in-production'
@@ -67,17 +118,7 @@ WSGI_APPLICATION = 'insurance_project.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'insurance_db',
-        'USER': 'root',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        }
-    }
+    'default': get_db_config_for_django()
 }
 
 # Password validation

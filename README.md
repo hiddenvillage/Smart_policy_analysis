@@ -38,19 +38,16 @@ pip install -r requirements.txt
 
 ### 2. 配置数据库
 
-在 `insurance_project/settings.py` 中修改数据库配置：
+在项目根目录的 `config.ini` 文件中修改数据库配置：
 
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'insurance_db',  # 数据库名
-        'USER': 'root',          # 数据库用户
-        'PASSWORD': 'password',  # 数据库密码
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
-}
+```ini
+[database]
+host = localhost
+port = 3306
+user = root
+password = password
+database = insurance_db
+charset = utf8mb4
 ```
 
 ### 3. 创建数据库
@@ -58,6 +55,8 @@ DATABASES = {
 ```sql
 CREATE DATABASE insurance_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
+
+**注意：** 项目现在从 `config.ini` 配置文件读取数据库参数，而不是硬编码在 settings.py 中。
 
 ### 4. 初始化数据库表
 
@@ -203,7 +202,7 @@ celery -A insurance_project beat -l info
 ## 项目结构
 
 ```
-tuandan/
+Smart_policy_analysis/
 ├── insurance_project/          # Django项目主目录
 │   ├── __init__.py
 │   ├── settings.py            # Django配置文件
@@ -227,6 +226,7 @@ tuandan/
 │   ├── templates/             # HTML模板
 │   │   └── index.html         # 主页面
 │   └── static/                # 静态文件
+├── config.ini                 # 数据库配置文件
 ├── manage.py                  # Django管理脚本
 ├── init_database.py          # 数据库初始化脚本
 ├── run_server.py             # 一键启动脚本
@@ -243,6 +243,7 @@ tuandan/
    - 单个文件大小：不超过50MB
 
 2. **数据库配置**
+   - 数据库配置从 `config.ini` 文件读取，不再硬编码在代码中
    - 确保MySQL服务已启动
    - 数据库字符集使用utf8mb4
    - 创建数据库用户并授权

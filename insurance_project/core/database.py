@@ -3,20 +3,71 @@ Database connection and query handler using PyMySQL
 """
 import pymysql
 import logging
+import configparser
+import os
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
-# Database configuration
-DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'password',
-    'database': 'insurance_db',
-    'charset': 'utf8mb4',
-    'cursorclass': pymysql.cursors.DictCursor,
-}
+# 读取配置文件
+def get_db_config():
+    """从配置文件读取数据库配置"""
+    config = configparser.ConfigParser()
+    
+    # 获取项目根目录
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    config_path = os.path.join(project_root, 'config.ini')
+    
+    # 如果配置文件不存在，使用默认配置
+    if not os.path.exists(config_path):
+        logger.warning(f"Configuration file not found at {config_path}, using default config")
+        return {
+            'host': 'localhost',
+            'user': 'root',
+            'password': 'password',
+            'database': 'insurance_db',
+            'charset': 'utf8mb4',
+            'cursorclass': pymysql.cursors.DictCursor,
+        }
+    
+    try:
+        config.read(config_path, encoding='utf-8')
+        db_config = dict(config['database'])
+        
+        # 确保必要参数存在
+        required_keys = ['host', 'user', 'password', 'database']
+        for key in required_keys:
+            if key not in db_config:
+                raise ValueError(f"Missing required database config: {key}")
+        
+        # 设置默认值
+        db_config.setdefault('charset', 'utf8mb4')
+        db_config.setdefault('port', '3306')
+        
+        # 转换端口为整数
+        if 'port' in db_config:
+            db_config['port'] = int(db_config['port'])
+        
+        # 设置游标类型
+        db_config['cursorclass'] = pymysql.cursors.DictCursor
+        
+        logger.info(f"Database configuration loaded from {config_path}")
+        return db_config
+        
+    except Exception as e:
+        logger.error(f"Failed to load database configuration: {e}, using default config")
+        return {
+            'host': 'localhost',
+            'user': 'root',
+            'password': 'password',
+            'database': 'insurance_db',
+            'charset': 'utf8mb4',
+            'cursorclass': pymysql.cursors.DictCursor,
+        }
+
+# 从配置文件获取数据库配置
+DB_CONFIG = get_db_config()
 
 class DatabaseConnection:
     """Database connection handler using PyMySQL"""
