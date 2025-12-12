@@ -285,6 +285,13 @@ def update_form_content(request):
                 'error': 'Missing required fields: task_id, content'
             }, status=400)
         
+        # Validate task_id
+        if not task_id or not task_id.strip():
+            return Response({
+                'success': False,
+                'error': 'Invalid task ID'
+            }, status=400)
+        
         # Update form content
         affected_rows = FormDataService.update_content(task_id, content)
         
@@ -314,6 +321,13 @@ def delete_form(request, task_id):
     Delete a single form by task_id
     """
     try:
+        # Validate task_id parameter
+        if not task_id or not task_id.strip():
+            return Response({
+                'success': False,
+                'error': 'Invalid task ID'
+            }, status=400)
+        
         affected_rows = FormDataService.delete_form(task_id)
         
         if affected_rows == 0:
@@ -372,6 +386,13 @@ def get_form_details(request, task_id):
     Get form details by task_id
     """
     try:
+        # Validate task_id parameter
+        if not task_id or not task_id.strip():
+            return Response({
+                'success': False,
+                'error': 'Invalid task ID'
+            }, status=400)
+        
         form = FormDataService.get_form_by_task_id(task_id)
         
         if not form:

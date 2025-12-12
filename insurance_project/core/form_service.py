@@ -54,8 +54,13 @@ class FormDataService:
     ) -> int:
         """Update task status and related fields"""
         try:
+            # Validate task_id
+            if not task_id or not task_id.strip():
+                logger.warning(f"Empty or invalid task_id provided for update_task_status: {task_id}")
+                raise ValueError("Invalid task_id")
+                
             params = {
-                'task_id': task_id,
+                'task_id': task_id.strip(),
                 'task_name': task_name,
                 'company': company,
                 'scene': scene,
@@ -72,8 +77,13 @@ class FormDataService:
     def update_content(task_id: str, update_content: str) -> int:
         """Update form content"""
         try:
+            # Validate task_id
+            if not task_id or not task_id.strip():
+                logger.warning(f"Empty or invalid task_id provided for update_content: {task_id}")
+                return 0
+                
             params = {
-                'task_id': task_id,
+                'task_id': task_id.strip(),
                 'update_content': update_content
             }
             return db.execute_update(UPDATE_FORM_CONTENT, params)
@@ -85,7 +95,12 @@ class FormDataService:
     def get_form_by_task_id(task_id: str) -> Optional[Dict[str, Any]]:
         """Get form data by task ID"""
         try:
-            params = {'task_id': task_id}
+            # Validate task_id
+            if not task_id or not task_id.strip():
+                logger.warning(f"Empty or invalid task_id provided: {task_id}")
+                return None
+                
+            params = {'task_id': task_id.strip()}
             result = db.execute_query(SELECT_FORM_BY_TASK_ID, params)
             return result[0] if result else None
         except Exception as e:
@@ -224,7 +239,12 @@ class FormDataService:
     def delete_form(task_id: str) -> int:
         """Delete a single form"""
         try:
-            params = {'task_id': task_id}
+            # Validate task_id
+            if not task_id or not task_id.strip():
+                logger.warning(f"Empty or invalid task_id provided for delete_form: {task_id}")
+                return 0
+                
+            params = {'task_id': task_id.strip()}
             return db.execute_update(DELETE_FORM_BY_TASK_ID, params)
         except Exception as e:
             logger.error(f"Failed to delete form: {e}")
@@ -237,8 +257,15 @@ class FormDataService:
             if not task_ids:
                 return 0
             
+            # Filter out empty/invalid task_ids and strip whitespace
+            valid_task_ids = [tid.strip() for tid in task_ids if tid and tid.strip()]
+            
+            if not valid_task_ids:
+                logger.warning(f"No valid task_ids provided for batch delete")
+                return 0
+            
             # Convert list to tuple for SQL IN clause
-            task_ids_tuple = tuple(task_ids)
+            task_ids_tuple = tuple(valid_task_ids)
             params = {'task_ids': task_ids_tuple}
             return db.execute_update(DELETE_FORM_BATCH, params)
         except Exception as e:

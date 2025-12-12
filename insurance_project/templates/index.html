@@ -1420,6 +1420,10 @@
         badcaseAnalyzeBtns.forEach(btn => {
             btn.addEventListener('click', function() {
                 const taskId = this.getAttribute('data-taskid');
+                if (!taskId || taskId.trim() === '') {
+                    alert('无效的任务ID');
+                    return;
+                }
                 modalTaskId.textContent = taskId;
                 badcaseModal.classList.remove('hidden');
                 // 根据任务ID加载不同的差异数据（模拟）
@@ -1632,21 +1636,21 @@
                     <td class="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">${task.create_time || '-'}</td>
                     <td class="py-3 px-4">
                         <div class="flex items-center gap-1">
-                            <button class="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-primary hover:bg-primary/20 transition-colors edit-task" data-taskid="${task.task_id}" title="编辑">
+                            <button class="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-primary hover:bg-primary/20 transition-colors edit-task" data-taskid="${task.task_id || ''}" title="编辑" ${!task.task_id ? 'disabled' : ''}>
                                 <i class="fa-solid fa-edit text-xs"></i>
                             </button>
-                            <button class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors view-task" data-taskid="${task.task_id}" title="查看详情">
+                            <button class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors view-task" data-taskid="${task.task_id || ''}" title="查看详情" ${!task.task_id ? 'disabled' : ''}>
                                 <i class="fa-solid fa-eye text-xs"></i>
                             </button>
-                            <button class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center text-${task.status === '完成' ? '600' : '400'} cursor-${task.status === '完成' ? 'pointer' : 'not-allowed'}" ${task.status === '完成' ? '' : 'disabled'} title="导出结果">
+                            <button class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center text-${task.status === '完成' ? '600' : '400'} cursor-${task.status === '完成' ? 'pointer' : 'not-allowed'} export-task" ${task.status === '完成' ? '' : 'disabled'} title="导出结果" ${!task.task_id ? 'disabled' : ''} data-taskid="${task.task_id || ''}">
                                 <i class="fa-solid fa-download text-xs"></i>
                             </button>
                             ${task.status === '失败' ? `
-                                <button class="w-7 h-7 bg-diff/10 rounded-lg flex items-center justify-center text-diff hover:bg-diff/20 transition-colors badcase-analyze" data-taskid="${task.task_id}" title="分析差异">
+                                <button class="w-7 h-7 bg-diff/10 rounded-lg flex items-center justify-center text-diff hover:bg-diff/20 transition-colors badcase-analyze" data-taskid="${task.task_id || ''}" title="分析差异" ${!task.task_id ? 'disabled' : ''}>
                                     <i class="fa-solid fa-chart-line text-xs"></i>
                                 </button>
                             ` : ''}
-                            <button class="w-7 h-7 bg-danger/10 rounded-lg flex items-center justify-center text-danger hover:bg-danger/20 transition-colors delete-task" data-taskid="${task.task_id}" title="删除">
+                            <button class="w-7 h-7 bg-danger/10 rounded-lg flex items-center justify-center text-danger hover:bg-danger/20 transition-colors delete-task" data-taskid="${task.task_id || ''}" title="删除" ${!task.task_id ? 'disabled' : ''}>
                                 <i class="fa-solid fa-trash text-xs"></i>
                             </button>
                         </div>
@@ -1736,11 +1740,17 @@
             document.querySelectorAll('.edit-task').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const taskId = this.getAttribute('data-taskid');
+                    if (!taskId || taskId.trim() === '') {
+                        alert('无效的任务ID');
+                        return;
+                    }
                     const response = await fetch(`/api/forms/${taskId}/`);
                     const result = await response.json();
                     
                     if (result.success) {
                         showEditModal(result.data);
+                    } else {
+                        alert(result.error || '获取任务详情失败');
                     }
                 });
             });
@@ -1749,11 +1759,17 @@
             document.querySelectorAll('.view-task').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const taskId = this.getAttribute('data-taskid');
+                    if (!taskId || taskId.trim() === '') {
+                        alert('无效的任务ID');
+                        return;
+                    }
                     const response = await fetch(`/api/forms/${taskId}/`);
                     const result = await response.json();
                     
                     if (result.success) {
                         showDetailsModal(result.data);
+                    } else {
+                        alert(result.error || '获取任务详情失败');
                     }
                 });
             });
@@ -1790,6 +1806,10 @@
             document.querySelectorAll('.export-task').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const taskId = this.getAttribute('data-taskid');
+                    if (!taskId || taskId.trim() === '') {
+                        alert('无效的任务ID');
+                        return;
+                    }
                     const response = await fetch(`/api/forms/${taskId}/`);
                     const result = await response.json();
                     
@@ -1802,6 +1822,8 @@
                         link.href = url;
                         link.download = `${taskId}_export.json`;
                         link.click();
+                    } else {
+                        alert(result.error || '导出失败');
                     }
                 });
             });
@@ -1810,6 +1832,10 @@
             document.querySelectorAll('.delete-task').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const taskId = this.getAttribute('data-taskid');
+                    if (!taskId || taskId.trim() === '') {
+                        alert('无效的任务ID');
+                        return;
+                    }
                     if (confirm(`确认删除任务 ${taskId}？`)) {
                         const response = await fetch(`/api/forms/${taskId}/delete/`, {
                             method: 'DELETE'
@@ -1819,6 +1845,8 @@
                         if (result.success) {
                             alert('任务删除成功');
                             await loadTaskList();
+                        } else {
+                            alert(result.error || '删除失败');
                         }
                     }
                 });
