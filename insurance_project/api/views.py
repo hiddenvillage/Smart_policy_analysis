@@ -14,7 +14,6 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
 
 from insurance_project.core.form_service import FormDataService
 
@@ -42,7 +41,7 @@ def start_interpretation(request):
             return Response({
                 'success': False,
                 'error': 'Missing required fields: task_name, company, scene'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=400)
         
         # Generate unique task ID
         task_id = f"T{datetime.now().strftime('%Y%m%d%H%M%S')}{str(uuid.uuid4())[:4].upper()}"
@@ -60,7 +59,7 @@ def start_interpretation(request):
             return Response({
                 'success': False,
                 'error': 'Please upload either a contract file, or images, or both'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=400)
         
         # Validate PDF file type (only if uploaded)
         if pdf_file:
@@ -68,7 +67,7 @@ def start_interpretation(request):
                 return Response({
                     'success': False,
                     'error': 'Contract file must be PDF format'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                }, status=400)
         
         # Validate PNG/JPG files (only if uploaded)
         if png_files:
@@ -76,7 +75,7 @@ def start_interpretation(request):
                 return Response({
                     'success': False,
                     'error': 'Maximum 30 image files allowed'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                }, status=400)
             
             img_extensions = ['.png', '.jpg', '.jpeg']
             for png_file in png_files:
@@ -84,7 +83,7 @@ def start_interpretation(request):
                     return Response({
                         'success': False,
                         'error': f'File {png_file.name} must be PNG, JPG, or JPEG format'
-                    }, status=status.HTTP_400_BAD_REQUEST)
+                    }, status=400)
         
         # Save files
         task_dir = os.path.join('uploads', task_id)
@@ -173,7 +172,7 @@ def start_interpretation(request):
             'success': True,
             'task_id': task_id,
             'message': 'Group order interpretation task started successfully'
-        }, status=status.HTTP_202_ACCEPTED)
+        }, status=202)
         
     except Exception as e:
         logger.error(f"Error starting interpretation: {e}", exc_info=True)
@@ -201,7 +200,7 @@ def query_task_status(request):
             return Response({
                 'success': False,
                 'error': 'Required query parameters: task_name, company'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=400)
         
         # Query forms
         result = FormDataService.query_forms(
@@ -214,14 +213,59 @@ def query_task_status(request):
         return Response({
             'success': True,
             'data': result
-        }, status=status.HTTP_200_OK)
+        }, status=200)
         
     except Exception as e:
         logger.error(f"Error querying task status: {e}")
         return Response({
             'success': False,
             'error': 'Internal server error'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=500)
+
+
+@api_view(['GET'])
+def get_all_tasks(request):
+    """
+    Get all tasks from database
+    Optional query params: page, page_size, status, company, scene, create_time
+    """
+    try:
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 10))
+        status = request.query_params.get('status', None)
+        company = request.query_params.get('company', None)
+        scene = request.query_params.get('scene', None)
+        create_time = request.query_params.get('create_time', None)
+        
+        # Handle empty string values to treat them as None (meaning all)
+        if company == '':
+            company = None
+        if scene == '':
+            scene = None
+        if create_time == '':
+            create_time = None
+        
+        # Get all tasks
+        result = FormDataService.get_all_tasks(
+            page=page,
+            page_size=page_size,
+            status=status,
+            company=company,
+            scene=scene,
+            create_time=create_time
+        )
+        
+        return Response({
+            'success': True,
+            'data': result
+        }, status=200)
+        
+    except Exception as e:
+        logger.error(f"Error getting all tasks: {e}")
+        return Response({
+            'success': False,
+            'error': 'Internal server error'
+        }, status=500)
 
 
 @csrf_exempt
@@ -239,7 +283,7 @@ def update_form_content(request):
             return Response({
                 'success': False,
                 'error': 'Missing required fields: task_id, content'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=400)
         
         # Update form content
         affected_rows = FormDataService.update_content(task_id, content)
@@ -248,19 +292,19 @@ def update_form_content(request):
             return Response({
                 'success': False,
                 'error': 'Task not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            }, status=404)
         
         return Response({
             'success': True,
             'message': 'Form content updated successfully'
-        }, status=status.HTTP_200_OK)
+        }, status=200)
         
     except Exception as e:
         logger.error(f"Error updating form content: {e}")
         return Response({
             'success': False,
             'error': 'Internal server error'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=500)
 
 
 @csrf_exempt
@@ -276,19 +320,19 @@ def delete_form(request, task_id):
             return Response({
                 'success': False,
                 'error': 'Task not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            }, status=404)
         
         return Response({
             'success': True,
             'message': 'Form deleted successfully'
-        }, status=status.HTTP_200_OK)
+        }, status=200)
         
     except Exception as e:
         logger.error(f"Error deleting form: {e}")
         return Response({
             'success': False,
             'error': 'Internal server error'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=500)
 
 
 @csrf_exempt
@@ -305,21 +349,21 @@ def delete_forms_batch(request):
             return Response({
                 'success': False,
                 'error': 'task_ids list is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=400)
         
         affected_rows = FormDataService.delete_forms_batch(task_ids)
         
         return Response({
             'success': True,
             'message': f'Deleted {affected_rows} forms successfully'
-        }, status=status.HTTP_200_OK)
+        }, status=200)
         
     except Exception as e:
         logger.error(f"Error deleting forms in batch: {e}")
         return Response({
             'success': False,
             'error': 'Internal server error'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=500)
 
 
 @api_view(['GET'])
@@ -334,7 +378,7 @@ def get_form_details(request, task_id):
             return Response({
                 'success': False,
                 'error': 'Task not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            }, status=404)
         
         # Format datetime
         if form.get('create_time'):
@@ -343,14 +387,14 @@ def get_form_details(request, task_id):
         return Response({
             'success': True,
             'data': form
-        }, status=status.HTTP_200_OK)
+        }, status=200)
         
     except Exception as e:
         logger.error(f"Error getting form details: {e}")
         return Response({
             'success': False,
             'error': 'Internal server error'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=500)
 
 
 @api_view(['GET'])

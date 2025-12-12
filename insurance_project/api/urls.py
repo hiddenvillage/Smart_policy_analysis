@@ -11,6 +11,9 @@ urlpatterns = [
     path('interpretation/start/', views.start_interpretation, name='start_interpretation'),
     path('interpretation/status/', views.query_task_status, name='query_task_status'),
     
+    # Task management endpoints
+    path('tasks/', views.get_all_tasks, name='get_all_tasks'),
+    
     # Form management endpoints
     path('forms/<str:task_id>/', views.get_form_details, name='get_form_details'),
     path('forms/<str:task_id>/update/', views.update_form_content, name='update_form_content'),

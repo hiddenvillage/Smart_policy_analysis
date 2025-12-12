@@ -93,6 +93,91 @@ class FormDataService:
             raise
     
     @staticmethod
+    def get_all_tasks(
+        page: int = 1,
+        page_size: int = 10,
+        status: Optional[str] = None,
+        company: Optional[str] = None,
+        scene: Optional[str] = None,
+        create_time: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Get all tasks with optional filters"""
+        try:
+            offset = (page - 1) * page_size
+            
+            # Build WHERE clause
+            where_conditions = []
+            params = {}
+            
+            if status:
+                where_conditions.append("status = %(status)s")
+                params['status'] = status
+            
+            if company:
+                where_conditions.append("company = %(company)s")
+                params['company'] = company
+            
+            if scene:
+                where_conditions.append("scene = %(scene)s")
+                params['scene'] = scene
+            
+            if create_time:
+                # Filter tasks created on or before the selected date
+                where_conditions.append("DATE(create_time) <= %(create_time)s")
+                params['create_time'] = create_time
+            
+            where_clause = ""
+            if where_conditions:
+                where_clause = "WHERE " + " AND ".join(where_conditions)
+            
+            # Build query
+            query = f"""
+                SELECT task_id, task_name, company, scene, status, progress, create_time
+                FROM form_data 
+                {where_clause}
+                ORDER BY create_time DESC 
+                LIMIT %(limit)s OFFSET %(offset)s
+            """
+            
+            # Build count query
+            count_query = f"""
+                SELECT COUNT(*) as total
+                FROM form_data 
+                {where_clause}
+            """
+            
+            params['limit'] = page_size
+            params['offset'] = offset
+            
+            # Execute queries
+            data = db.execute_query(query, params)
+            total_count_result = db.execute_query_one(count_query, params)
+            total_count = int(total_count_result['total']) if total_count_result and total_count_result.get('total') else 0
+            
+            # Format datetime fields if they are datetime objects
+            for task in data:
+                if task.get('create_time') and hasattr(task['create_time'], 'strftime'):
+                    task['create_time'] = task['create_time'].strftime('%Y-%m-%d %H:%M')
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size
+            
+            return {
+                'data': data or [],
+                'pagination': {
+                    'page': page,
+                    'page_size': page_size,
+                    'total': total_count,
+                    'total_pages': total_pages,
+                    'has_next': page < total_pages,
+                    'has_prev': page > 1
+                }
+            }
+        except Exception as e:
+            logger.error(f"Failed to get all tasks: {e}")
+            raise
+    
+    @staticmethod
     def query_forms(
         task_name: Optional[str] = None,
         company: Optional[str] = None,

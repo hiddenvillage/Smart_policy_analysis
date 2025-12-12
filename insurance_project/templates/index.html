@@ -181,6 +181,29 @@
                 display: none;
             }
         }
+        
+        /* Modal animations */
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes zoom-in {
+            from {
+                transform: scale(0.95);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        
+        .animate-in {
+            animation: fade-in 0.2s ease-out, zoom-in 0.2s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans h-screen flex flex-col overflow-hidden">
@@ -352,11 +375,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">任务名称 <span class="text-danger">*</span></label>
-                                <input type="text" id="task-name" class="apple-input w-full bg-gray-50" placeholder="任务名称将自动生成" readonly>
+                                <input type="text" id="task-name" class="apple-input w-full" placeholder="请输入自定义任务名称">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">所属企业 <span class="text-danger">*</span></label>
-                                <input type="text" id="task-company" class="apple-input w-full" placeholder="请输入企业名称" value="北京某科技有限公司">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">所属企业</label>
+                                <input type="text" id="task-company" class="apple-input w-full" placeholder="请输入企业名称（选填）" value="">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">智配场景 <span class="text-danger">*</span></label>
@@ -492,31 +515,22 @@
                                     <option value="processing">处理中</option>
                                     <option value="success">处理成功</option>
                                     <option value="failed">处理失败</option>
-                                    <option value="badcase">BadCase</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-sm"></i>
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">创建时间</label>
-                            <input type="date" class="apple-input text-sm w-full">
+                            <input type="date" id="filter-date" class="apple-input text-sm w-full">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">所属企业</label>
-                            <div class="relative">
-                                <select class="apple-input text-sm w-full appearance-none cursor-pointer">
-                                    <option value="">全部</option>
-                                    <option value="1">北京某科技有限公司</option>
-                                    <option value="2">上海某贸易有限公司</option>
-                                    <option value="3">广州某制造有限公司</option>
-                                </select>
-                                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-sm"></i>
-                            </div>
+                            <input type="text" id="filter-company" class="apple-input text-sm w-full" placeholder="请输入企业名称（为空表示全部）">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">场景类型</label>
                             <div class="relative">
-                                <select class="apple-input text-sm w-full appearance-none cursor-pointer">
+                                <select id="filter-scene" class="apple-input text-sm w-full appearance-none cursor-pointer">
                                     <option value="">全部</option>
                                     <option value="团健险解读与智配">团健险解读与智配</option>
                                     <option value="团寿险解读与智配">团寿险解读与智配</option>
@@ -527,11 +541,11 @@
                         </div>
                     </div>
                     <div class="flex justify-end gap-3 mt-6">
-                        <button class="apple-button apple-button-secondary text-sm">
+                        <button id="reset-filter" class="apple-button apple-button-secondary text-sm">
                             <i class="fa-solid fa-rotate-left mr-2"></i>
                             重置
                         </button>
-                        <button class="apple-button apple-button-primary text-sm">
+                        <button id="search-filter" class="apple-button apple-button-primary text-sm">
                             <i class="fa-solid fa-search mr-2"></i>
                             查询
                         </button>
@@ -557,155 +571,16 @@
                         <table class="w-full">
                             <thead>
                                 <tr class="bg-gray-50 border-b border-gray-100">
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">任务ID</th>
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">任务名称</th>
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">所属企业</th>
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">场景</th>
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">处理进度</th>
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">创建时间</th>
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">BadCase标记</th>
-                                    <th class="text-left py-4 px-6 text-gray-700 font-semibold text-sm">操作</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-semibold text-sm whitespace-nowrap">任务名称</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-semibold text-sm whitespace-nowrap">所属企业</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-semibold text-sm whitespace-nowrap">场景</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-semibold text-sm whitespace-nowrap">处理进度</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-semibold text-sm whitespace-nowrap">创建时间</th>
+                                    <th class="text-left py-3 px-4 text-gray-700 font-semibold text-sm whitespace-nowrap">操作</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                    <td class="py-4 px-6">
-                                        <span class="text-sm font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded">T20251209001</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <p class="text-sm font-medium text-gray-800">团健险智配_20251209_001</p>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <p class="text-sm text-gray-700">北京某科技有限公司</p>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <span class="text-xs bg-success/10 text-success px-2.5 py-1 rounded-full font-medium">团健险</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-3">
-                                            <div class="flex-1 max-w-24">
-                                                <div class="bg-gray-200 rounded-full h-2 overflow-hidden">
-                                                    <div class="bg-success h-2 rounded-full transition-all duration-500" style="width: 100%"></div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-1">
-                                                <i class="fa-solid fa-check-circle text-success text-xs"></i>
-                                                <span class="text-xs text-success font-medium">100%</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 px-6 text-sm text-gray-600">2025-12-09 10:23</td>
-                                    <td class="py-4 px-6">
-                                        <span class="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">无</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-2">
-                                            <button class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary hover:bg-primary/20 transition-colors edit-task" data-taskid="T20251209001" title="编辑">
-                                                <i class="fa-solid fa-edit text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors view-task" data-taskid="T20251209001" title="查看详情">
-                                                <i class="fa-solid fa-eye text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors export-task" data-taskid="T20251209001" title="导出结果">
-                                                <i class="fa-solid fa-download text-sm"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 bg-danger/5 transition-colors">
-                                    <td class="py-4 px-6">
-                                        <span class="text-sm font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded">T20251209002</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <p class="text-sm font-medium text-gray-800">团寿险智配_20251209_002</p>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <p class="text-sm text-gray-700">上海某贸易有限公司</p>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <span class="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium">团寿险</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-3">
-                                            <div class="flex-1 max-w-24">
-                                                <div class="bg-gray-200 rounded-full h-2 overflow-hidden">
-                                                    <div class="bg-warning h-2 rounded-full transition-all duration-500" style="width: 85%"></div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-1">
-                                                <i class="fa-solid fa-spinner text-warning text-xs animate-spin"></i>
-                                                <span class="text-xs text-warning font-medium">85%</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 px-6 text-sm text-gray-600">2025-12-09 09:15</td>
-                                    <td class="py-4 px-6">
-                                        <span class="text-xs bg-danger/10 text-danger px-2.5 py-1 rounded-full font-medium">BadCase</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-2">
-                                            <button class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary hover:bg-primary/20 transition-colors edit-task" data-taskid="T20251209002" title="编辑">
-                                                <i class="fa-solid fa-edit text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors view-task" data-taskid="T20251209002" title="查看详情">
-                                                <i class="fa-solid fa-eye text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 cursor-not-allowed" title="导出结果" disabled>
-                                                <i class="fa-solid fa-download text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-diff/10 rounded-lg flex items-center justify-center text-diff hover:bg-diff/20 transition-colors badcase-analyze" data-taskid="T20251209002" title="分析差异">
-                                                <i class="fa-solid fa-chart-line text-sm"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 bg-danger/5 transition-colors">
-                                    <td class="py-4 px-6">
-                                        <span class="text-sm font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded">T20251209003</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <p class="text-sm font-medium text-gray-800">团产险智配_20251209_003</p>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <p class="text-sm text-gray-700">广州某制造有限公司</p>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <span class="text-xs bg-warning/10 text-warning px-2.5 py-1 rounded-full font-medium">团产险</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-3">
-                                            <div class="flex-1 max-w-24">
-                                                <div class="bg-gray-200 rounded-full h-2 overflow-hidden">
-                                                    <div class="bg-danger h-2 rounded-full" style="width: 0%"></div>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-1">
-                                                <i class="fa-solid fa-times-circle text-danger text-xs"></i>
-                                                <span class="text-xs text-danger font-medium">失败</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 px-6 text-sm text-gray-600">2025-12-09 08:40</td>
-                                    <td class="py-4 px-6">
-                                        <span class="text-xs bg-danger/10 text-danger px-2.5 py-1 rounded-full font-medium">BadCase</span>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-2">
-                                            <button class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary hover:bg-primary/20 transition-colors edit-task" data-taskid="T20251209003" title="编辑">
-                                                <i class="fa-solid fa-edit text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors view-task" data-taskid="T20251209003" title="查看详情">
-                                                <i class="fa-solid fa-eye text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 cursor-not-allowed" title="导出结果" disabled>
-                                                <i class="fa-solid fa-download text-sm"></i>
-                                            </button>
-                                            <button class="w-8 h-8 bg-diff/10 rounded-lg flex items-center justify-center text-diff hover:bg-diff/20 transition-colors badcase-analyze" data-taskid="T20251209003" title="分析差异">
-                                                <i class="fa-solid fa-chart-line text-sm"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                            <tbody id="task-table-body">
+                                <!-- Tasks will be dynamically loaded here -->
                             </tbody>
                         </table>
                     </div>
@@ -1258,6 +1133,15 @@
 
     <!-- 交互逻辑脚本 -->
     <script>
+        // 全局错误处理
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript错误:', e.error);
+        });
+        
+        // 添加页面加载完成的提示
+        window.addEventListener('load', function() {
+            console.log('页面加载完成');
+        });
         // 1. 基础导航切换
         const sidebarItems = document.querySelectorAll('nav li');
         const pageContents = document.querySelectorAll('.page-content');
@@ -1275,6 +1159,10 @@
             // 数据飞轮页面初始化图表
             if (targetId === 'data-flywheel-page') {
                 initBadCaseCharts();
+            }
+            // 任务列表页面加载数据
+            if (targetId === 'task-list-page') {
+                loadTaskList();
             }
         }
 
@@ -1459,8 +1347,8 @@
                     const company = document.getElementById('task-company').value;
                     const scene = document.getElementById('task-scene').value;
                     
-                    if (!taskName || !company || !scene) {
-                        alert('请填写所有必填字段');
+                    if (!taskName || !scene) {
+                        alert('请填写任务名称和选择智配场景');
                         return;
                     }
                     
@@ -1519,28 +1407,7 @@
             }
         });
 
-        // 4. 任务列表编辑跳转
-        const editTaskBtns = document.querySelectorAll('.edit-task');
-        const configTaskId = document.getElementById('config-taskid');
-        const backTaskListBtn = document.getElementById('back-task-list');
-        const saveConfigBtn = document.getElementById('save-config');
-
-        editTaskBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const taskId = this.getAttribute('data-taskid');
-                switchPage('config-system-page');
-                configTaskId.textContent = taskId;
-            });
-        });
-
-        backTaskListBtn.addEventListener('click', function() {
-            switchPage('task-list-page');
-        });
-
-        saveConfigBtn.addEventListener('click', function() {
-            alert('配置已成功保存！');
-            switchPage('task-list-page');
-        });
+        // 4. 任务列表跳转（已移除重复的事件绑定）
 
         // 5. BadCase差异分析弹窗逻辑
         const badcaseAnalyzeBtns = document.querySelectorAll('.badcase-analyze');
@@ -1593,9 +1460,9 @@
                 clearInterval(pollingInterval);
             }
             
-            // Poll every 2 seconds
+            // Poll every 2 seconds (不要触发手动查询)
             pollingInterval = setInterval(async () => {
-                await loadTaskList();
+                await loadTaskList(false); // 传入false表示这是自动轮询
             }, 2000);
         }
         
@@ -1606,22 +1473,105 @@
             }
         }
         
+        // 防抖函数
+        let queryTimeout = null;
+        let isQuerying = false;
+        
         // Load task list from backend
-        async function loadTaskList() {
+        async function loadTaskList(isManualQuery = false) {
+            // 防止重复查询
+            if (isQuerying) {
+                return;
+            }
+            
+            // 清除之前的定时器
+            if (queryTimeout) {
+                clearTimeout(queryTimeout);
+            }
+            
+            // 如果是手动查询，延迟200ms执行以避免快速点击
+            if (isManualQuery) {
+                queryTimeout = setTimeout(async () => {
+                    await performQuery();
+                }, 200);
+                return;
+            }
+            
+            await performQuery();
+        }
+        
+        // 实际执行查询的函数
+        async function performQuery() {
+            if (isQuerying) return;
+            isQuerying = true;
+            
+            // 显示加载状态（可选）
+            const searchBtn = document.getElementById('search-filter-btn');
+            if (searchBtn) {
+                searchBtn.disabled = true;
+                searchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>查询中...';
+            }
+            
             try {
-                const response = await fetch('/api/interpretation/status/?page=1&page_size=100');
+                // Get filter values
+                const selects = document.querySelectorAll('#task-list-page select');
+                const statusSelect = selects[0]; // Task status select
+                const sceneSelect = document.getElementById('filter-scene'); // Scene select
+                const companyInput = document.getElementById('filter-company');
+                const dateInput = document.getElementById('filter-date');
+                
+                // Build query params
+                const params = new URLSearchParams({
+                    page: 1,
+                    page_size: 10
+                });
+                
+                // Only append filter if they have a non-empty value
+                if (statusSelect && statusSelect.value && statusSelect.value !== 'all') {
+                    // Map frontend values to backend values
+                    const statusMap = {
+                        'pending': '待处理',
+                        'processing': '解读中',
+                        'success': '完成',  // Changed from '已完成' to '完成'
+                        'failed': '失败'
+                    };
+                    params.append('status', statusMap[statusSelect.value] || statusSelect.value);
+                }
+                if (companyInput && companyInput.value.trim()) {
+                    params.append('company', companyInput.value.trim());
+                }
+                if (sceneSelect && sceneSelect.value) {
+                    params.append('scene', sceneSelect.value);
+                }
+                if (dateInput && dateInput.value) {
+                    params.append('create_time', dateInput.value);
+                }
+                
+                const response = await fetch(`/api/tasks/?${params.toString()}`);
                 const result = await response.json();
                 
                 if (result.success) {
                     updateTaskTable(result.data.data);
+                    
+                    // Update pagination info
+                    updatePagination(result.data.pagination);
                 }
             } catch (error) {
                 console.error('Error loading task list:', error);
+            } finally {
+                isQuerying = false;
+                
+                // 恢复按钮状态
+                const searchBtn = document.getElementById('search-filter-btn');
+                if (searchBtn) {
+                    searchBtn.disabled = false;
+                    searchBtn.innerHTML = '<i class="fa-solid fa-search mr-2"></i>查询';
+                }
             }
         }
         
         function updateTaskTable(tasks) {
-            const tbody = document.querySelector('#task-list-page tbody');
+            const tbody = document.getElementById('task-table-body');
             if (!tbody) return;
             
             // Clear existing rows
@@ -1655,33 +1605,50 @@
                 const progressPercent = task.progress.replace('%', '');
                 
                 row.innerHTML = `
-                    <td class="py-3 px-4 text-gray-800">${task.task_id}</td>
-                    <td class="py-3 px-4 text-gray-800">${task.task_name}</td>
-                    <td class="py-3 px-4 text-gray-800">${task.company}</td>
-                    <td class="py-3 px-4 text-gray-800">${task.scene}</td>
                     <td class="py-3 px-4">
-                        <div class="w-24 bg-gray-200 rounded-full h-2">
-                            <div class="${progressColor} h-2 rounded-full" style="width: ${progressPercent}%"></div>
+                        <p class="text-sm font-medium text-gray-800 truncate max-w-xs" title="${task.task_name}">${task.task_name}</p>
+                    </td>
+                    <td class="py-3 px-4">
+                        <p class="text-sm text-gray-700 truncate max-w-xs" title="${task.company}">${task.company}</p>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="text-xs ${getSceneClass(task.scene)} px-2.5 py-1 rounded-full whitespace-nowrap">${getSceneText(task.scene)}</span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 min-w-[80px]">
+                                <div class="bg-gray-200 rounded-full h-2 overflow-hidden">
+                                    <div class="${progressColor} h-2 rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1 whitespace-nowrap">
+                                ${task.status === '完成' ? '<i class="fa-solid fa-check-circle text-success text-xs"></i>' : 
+                                  task.status === '失败' ? '<i class="fa-solid fa-times-circle text-danger text-xs"></i>' :
+                                  '<i class="fa-solid fa-spinner text-warning text-xs animate-spin"></i>'}
+                                <span class="text-xs ${progressColor.replace('bg-', 'text-')} font-medium">${task.progress || progressPercent + '%'}</span>
+                            </div>
                         </div>
-                        <span class="text-${progressColor.replace('bg-', 'text-')} text-xs mt-1 inline-block">${task.progress} ${statusText}</span>
                     </td>
-                    <td class="py-3 px-4 text-gray-600">${task.create_time}</td>
+                    <td class="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">${task.create_time || '-'}</td>
                     <td class="py-3 px-4">
-                        <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">
-                            ${task.status === '失败' ? '是' : '无'}
-                        </span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <div class="flex gap-2">
-                            <button class="text-primary text-xs hover:underline edit-task" data-taskid="${task.task_id}">编辑</button>
-                            <button class="text-gray-600 text-xs hover:underline view-task" data-taskid="${task.task_id}">查看详情</button>
-                            ${task.status === '完成' ? 
-                                `<button class="text-gray-600 text-xs hover:underline export-task" data-taskid="${task.task_id}">导出结果</button>` :
-                                `<button class="text-gray-400 text-xs cursor-not-allowed">导出结果</button>`
-                            }
-                            ${task.status === '失败' || task.status === '完成' ? 
-                                `<button class="text-diff text-xs hover:underline badcase-analyze" data-taskid="${task.task_id}">分析差异</button>` : ''
-                            }
+                        <div class="flex items-center gap-1">
+                            <button class="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-primary hover:bg-primary/20 transition-colors edit-task" data-taskid="${task.task_id}" title="编辑">
+                                <i class="fa-solid fa-edit text-xs"></i>
+                            </button>
+                            <button class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors view-task" data-taskid="${task.task_id}" title="查看详情">
+                                <i class="fa-solid fa-eye text-xs"></i>
+                            </button>
+                            <button class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center text-${task.status === '完成' ? '600' : '400'} cursor-${task.status === '完成' ? 'pointer' : 'not-allowed'}" ${task.status === '完成' ? '' : 'disabled'} title="导出结果">
+                                <i class="fa-solid fa-download text-xs"></i>
+                            </button>
+                            ${task.status === '失败' ? `
+                                <button class="w-7 h-7 bg-diff/10 rounded-lg flex items-center justify-center text-diff hover:bg-diff/20 transition-colors badcase-analyze" data-taskid="${task.task_id}" title="分析差异">
+                                    <i class="fa-solid fa-chart-line text-xs"></i>
+                                </button>
+                            ` : ''}
+                            <button class="w-7 h-7 bg-danger/10 rounded-lg flex items-center justify-center text-danger hover:bg-danger/20 transition-colors delete-task" data-taskid="${task.task_id}" title="删除">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
                         </div>
                     </td>
                 `;
@@ -1693,6 +1660,77 @@
             attachTaskListListeners();
         }
         
+        // Helper function to get scene class
+        function getSceneClass(scene) {
+            if (scene.includes('团健险')) return 'bg-success/10 text-success';
+            if (scene.includes('团寿险')) return 'bg-primary/10 text-primary';
+            if (scene.includes('团产险')) return 'bg-warning/10 text-warning';
+            return 'bg-gray-100 text-gray-600';
+        }
+        
+        // Helper function to get scene text
+        function getSceneText(scene) {
+            if (scene.includes('团健险')) return '团健险';
+            if (scene.includes('团寿险')) return '团寿险';
+            if (scene.includes('团产险')) return '团产险';
+            return scene;
+        }
+        
+        // Update pagination display
+        function updatePagination(pagination) {
+            const paginationDiv = document.querySelector('#task-list-page .flex.justify-between.items-center.border-t');
+            if (!paginationDiv || !pagination) return;
+            
+            paginationDiv.innerHTML = `
+                <div class="text-sm text-gray-600">
+                    显示 <span class="font-medium text-gray-800">${(pagination.page - 1) * pagination.page_size + 1}-${Math.min(pagination.page * pagination.page_size, pagination.total)}</span> 条，共 <span class="font-medium text-gray-800">${pagination.total}</span> 条记录
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-all ${!pagination.has_prev ? 'opacity-50 cursor-not-allowed' : ''}" onclick="loadPage(${pagination.page - 1})" ${!pagination.has_prev ? 'disabled' : ''}>
+                        <i class="fa-solid fa-chevron-left text-sm"></i>
+                    </button>
+                    ${generatePaginationButtons(pagination)}
+                    <button class="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-all ${!pagination.has_next ? 'opacity-50 cursor-not-allowed' : ''}" onclick="loadPage(${pagination.page + 1})" ${!pagination.has_next ? 'disabled' : ''}>
+                        <i class="fa-solid fa-chevron-right text-sm"></i>
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Generate pagination buttons
+        function generatePaginationButtons(pagination) {
+            let buttons = '';
+            const start = Math.max(1, pagination.page - 2);
+            const end = Math.min(pagination.total_pages, pagination.page + 2);
+            
+            for (let i = start; i <= end; i++) {
+                const isActive = i === pagination.page;
+                buttons += `
+                    <button class="w-10 h-10 ${isActive ? 'bg-primary text-white shadow-lg' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'} rounded-xl flex items-center justify-center font-medium transition-all" onclick="loadPage(${i})">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            return buttons;
+        }
+        
+        // Load specific page
+        async function loadPage(page) {
+            try {
+                const response = await fetch(`/api/tasks/?page=${page}&page_size=10`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateTaskTable(result.data.data);
+                    updatePagination(result.data.pagination);
+                }
+            } catch (error) {
+                console.error('Error loading page:', error);
+            }
+        }
+        
+        // Re-attach event listeners
         function attachTaskListListeners() {
             // Edit task buttons
             document.querySelectorAll('.edit-task').forEach(btn => {
@@ -1702,7 +1740,6 @@
                     const result = await response.json();
                     
                     if (result.success) {
-                        // Show edit modal or navigate to edit page
                         showEditModal(result.data);
                     }
                 });
@@ -1716,11 +1753,38 @@
                     const result = await response.json();
                     
                     if (result.success) {
-                        // Show details modal
                         showDetailsModal(result.data);
                     }
                 });
             });
+            
+            // Filter buttons
+            const resetFilterBtn = document.getElementById('reset-filter');
+            const searchFilterBtn = document.getElementById('search-filter');
+            
+            if (resetFilterBtn) {
+                resetFilterBtn.addEventListener('click', function() {
+                    // Reset all filters
+                    const selects = document.querySelectorAll('#task-list-page select');
+                    const statusSelect = selects[0]; // Task status select
+                    const sceneSelect = document.getElementById('filter-scene');
+                    const companyInput = document.getElementById('filter-company');
+                    const dateInput = document.getElementById('filter-date');
+                    
+                    if (statusSelect) statusSelect.value = 'all';
+                    if (companyInput) companyInput.value = '';
+                    if (sceneSelect) sceneSelect.value = '';
+                    if (dateInput) dateInput.value = '';
+                    
+                    loadTaskList();
+                });
+            }
+            
+            if (searchFilterBtn) {
+                searchFilterBtn.addEventListener('click', function() {
+                    loadTaskList(true); // 传入true表示这是手动查询
+                });
+            }
             
             // Export task buttons
             document.querySelectorAll('.export-task').forEach(btn => {
@@ -1762,35 +1826,359 @@
         }
         
         function showEditModal(taskData) {
-            // Create and show edit modal
+            // Parse JSON content
+            let editData = null;
+            const contentToEdit = taskData.update_content || taskData.llm_content || '';
+            
+            try {
+                editData = contentToEdit ? JSON.parse(contentToEdit) : {};
+            } catch (e) {
+                console.error('Error parsing content:', e);
+                editData = {};
+            }
+
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4';
             modal.innerHTML = `
-                <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold">编辑任务内容 - ${taskData.task_id}</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                            <i class="fa-solid fa-times"></i>
-                        </button>
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
+                    <!-- Header with Gradient Background -->
+                    <div class="relative bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 px-8 py-8 border-b border-gray-100">
+                        <!-- Decorative Pattern -->
+                        <div class="absolute inset-0 opacity-10">
+                            <div class="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+                            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full blur-2xl"></div>
+                        </div>
+                        
+                        <!-- Header Content -->
+                        <div class="relative flex items-center justify-between">
+                            <div class="flex items-center gap-5">
+                                <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+                                    <i class="fa-solid fa-edit text-white text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-3xl font-bold text-white mb-1">编辑任务内容</h3>
+                                    <p class="text-purple-200 text-sm font-medium">任务ID: ${taskData.task_id}</p>
+                                </div>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl flex items-center justify-center transition-all duration-200 border border-white/30">
+                                <i class="fa-solid fa-times text-white text-xl"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium mb-2">更新内容</label>
-                        <textarea id="edit-content" class="w-full h-64 p-3 border rounded-lg" 
-                                  placeholder="输入更新的内容...">${taskData.update_content || ''}</textarea>
+
+                    <!-- Content with Tabs -->
+                    <div class="flex-1 overflow-y-auto bg-gray-50">
+                        <!-- Tab Navigation -->
+                        <div class="bg-white border-b border-gray-200 px-8">
+                            <div class="flex space-x-8">
+                                <button type="button" id="form-tab" class="py-4 px-1 border-b-2 border-purple-600 font-medium text-sm text-purple-600 transition-colors">
+                                    <i class="fa-solid fa-table-cells mr-2"></i>表单编辑
+                                </button>
+                                <button type="button" id="json-tab" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors">
+                                    <i class="fa-solid fa-code mr-2"></i>JSON编辑
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="px-8 py-6">
+                            <!-- Form Fields Container -->
+                            <div id="edit-form-container" class="space-y-6">
+                                <!-- Dynamic form fields will be inserted here -->
+                            </div>
+
+                            <!-- JSON Editor (Hidden by default) -->
+                            <div id="json-editor-container" class="hidden">
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                                        <label class="text-sm font-semibold text-gray-700 flex items-center">
+                                            <i class="fa-solid fa-code text-purple-600 mr-2"></i>
+                                            JSON编辑器
+                                            <span class="ml-2 text-xs text-gray-500 font-normal">(直接编辑JSON格式数据)</span>
+                                        </label>
+                                    </div>
+                                    <div class="p-6">
+                                        <textarea id="json-editor" class="w-full h-96 p-4 bg-gray-900 text-gray-100 rounded-lg font-mono text-sm border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-colors" 
+                                                  placeholder="JSON格式的数据..."></textarea>
+                                        <div id="json-error" class="mt-3 text-sm text-red-600 hidden flex items-start">
+                                            <i class="fa-solid fa-exclamation-circle mt-0.5 mr-2"></i>
+                                            <span id="json-error-message"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex justify-end gap-3">
-                        <button onclick="this.closest('.fixed').remove()" 
-                                class="px-4 py-2 border rounded-md hover:bg-gray-50">取消</button>
-                        <button onclick="saveTaskContent('${taskData.task_id}')" 
-                                class="px-4 py-2 bg-primary text-white rounded-md hover:bg-secondary">保存</button>
+
+                    <!-- Enhanced Footer -->
+                    <div class="px-8 py-6 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2 text-sm text-gray-500">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <span>提示：表单编辑模式适合快速修改，JSON编辑模式适合批量修改</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="this.closest('.fixed').remove()" class="px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium border border-gray-300 shadow-sm hover:shadow-md">
+                                    <i class="fa-solid fa-times mr-2"></i>取消
+                                </button>
+                                <button onclick="saveTaskContent('${taskData.task_id}')" class="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105">
+                                    <i class="fa-solid fa-save mr-2"></i>保存更改
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
+
+            // Initialize form fields
+            renderEditForm(editData);
+
+            // Setup tab functionality
+            const formTab = document.getElementById('form-tab');
+            const jsonTab = document.getElementById('json-tab');
+            const formContainer = document.getElementById('edit-form-container');
+            const jsonContainer = document.getElementById('json-editor-container');
+            const jsonEditor = document.getElementById('json-editor');
+            const jsonError = document.getElementById('json-error');
+            const jsonErrorMessage = document.getElementById('json-error-message');
+
+            // Initialize JSON editor with current data
+            jsonEditor.value = JSON.stringify(editData, null, 2);
+
+            // Form tab click handler
+            formTab.addEventListener('click', function() {
+                // Switch to form mode
+                formTab.classList.add('border-purple-600', 'text-purple-600');
+                formTab.classList.remove('border-transparent', 'text-gray-500');
+                jsonTab.classList.remove('border-purple-600', 'text-purple-600');
+                jsonTab.classList.add('border-transparent', 'text-gray-500');
+                
+                formContainer.classList.remove('hidden');
+                jsonContainer.classList.add('hidden');
+                
+                // Validate and sync JSON to form if coming from JSON mode
+                if (!jsonContainer.classList.contains('hidden')) {
+                    try {
+                        const jsonData = JSON.parse(jsonEditor.value);
+                        renderEditForm(jsonData);
+                        jsonError.classList.add('hidden');
+                    } catch (e) {
+                        jsonErrorMessage.textContent = 'JSON格式错误，无法切换到表单模式: ' + e.message;
+                        jsonError.classList.remove('hidden');
+                        return; // Don't switch if JSON is invalid
+                    }
+                }
+            });
+
+            // JSON tab click handler
+            jsonTab.addEventListener('click', function() {
+                // Switch to JSON mode
+                jsonTab.classList.add('border-purple-600', 'text-purple-600');
+                jsonTab.classList.remove('border-transparent', 'text-gray-500');
+                formTab.classList.remove('border-purple-600', 'text-purple-600');
+                formTab.classList.add('border-transparent', 'text-gray-500');
+                
+                formContainer.classList.add('hidden');
+                jsonContainer.classList.remove('hidden');
+                
+                // Sync data to JSON editor
+                const formData = collectFormData();
+                jsonEditor.value = JSON.stringify(formData, null, 2);
+            });
+
+            // Add real-time JSON validation
+            jsonEditor.addEventListener('input', function() {
+                try {
+                    JSON.parse(this.value);
+                    jsonError.classList.add('hidden');
+                    this.classList.remove('border-red-500');
+                    this.classList.add('border-gray-300');
+                } catch (e) {
+                    jsonErrorMessage.textContent = 'JSON格式错误: ' + e.message;
+                    jsonError.classList.remove('hidden');
+                    this.classList.add('border-red-500');
+                    this.classList.remove('border-gray-300');
+                }
+            });
+        }
+        
+        // Render edit form fields from JSON data
+        function renderEditForm(data) {
+            const container = document.getElementById('edit-form-container');
+            if (!container) return;
+            
+            let html = '';
+            
+            // Common fields for insurance policy
+            const commonFields = [
+                { key: 'policy_number', label: '保单号', type: 'text' },
+                { key: 'company_name', label: '公司名称', type: 'text' },
+                { key: 'scene_type', label: '场景类型', type: 'text' },
+                { key: 'premium_amount', label: '保费金额', type: 'text' },
+                { key: 'coverage_details', label: '保障详情', type: 'textarea' }
+            ];
+            
+            // Render common fields
+            html += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">';
+            html += '<div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">';
+            html += '<h4 class="text-lg font-semibold text-gray-800 flex items-center"><i class="fa-solid fa-file-alt text-purple-600 mr-3"></i>基本信息</h4>';
+            html += '</div>';
+            html += '<div class="p-6">';
+            html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-5">';
+            
+            commonFields.forEach(field => {
+                const value = getValueFromData(data, field.key);
+                html += `
+                    <div class="${field.type === 'textarea' ? 'md:col-span-2' : ''}">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">${field.label}</label>
+                        ${field.type === 'textarea' 
+                            ? `<textarea name="${field.key}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none" rows="3" placeholder="请输入${field.label}...">${value}</textarea>`
+                            : `<input type="${field.type}" name="${field.key}" value="${value}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" placeholder="请输入${field.label}...">`
+                        }
+                    </div>
+                `;
+            });
+            
+            html += '</div></div></div>';
+            
+            // Render extracted_data if exists
+            if (data.extracted_data && typeof data.extracted_data === 'object') {
+                html += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">';
+                html += '<div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">';
+                html += '<h4 class="text-lg font-semibold text-gray-800 flex items-center"><i class="fa-solid fa-database text-blue-600 mr-3"></i>提取的数据</h4>';
+                html += '</div>';
+                html += '<div class="p-6">';
+                html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-5">';
+                
+                for (const [key, value] of Object.entries(data.extracted_data)) {
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const isTextarea = typeof value === 'string' && value.length > 50;
+                    html += `
+                        <div class="${isTextarea ? 'md:col-span-2' : ''}">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${label}</label>
+                            ${isTextarea 
+                                ? `<textarea name="extracted_data_${key}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none" rows="3" placeholder="请输入${label}...">${value}</textarea>`
+                                : `<input type="text" name="extracted_data_${key}" value="${value || ''}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" placeholder="请输入${label}...">`
+                            }
+                        </div>
+                    `;
+                }
+                
+                html += '</div></div></div>';
+            }
+            
+            // Render message field if exists
+            if (data.message !== undefined) {
+                html += `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-800 flex items-center"><i class="fa-solid fa-comment text-green-600 mr-3"></i>说明信息</h4>
+                        </div>
+                        <div class="p-6">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">消息内容</label>
+                                <textarea name="message" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none" rows="3" placeholder="请输入消息内容...">${data.message}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Render other fields
+            const otherFields = Object.keys(data).filter(key => 
+                !commonFields.find(f => f.key === key) && 
+                key !== 'extracted_data' && 
+                key !== 'message'
+            );
+            
+            if (otherFields.length > 0) {
+                html += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">';
+                html += '<div class="px-6 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200">';
+                html += '<h4 class="text-lg font-semibold text-gray-800 flex items-center"><i class="fa-solid fa-info-circle text-amber-600 mr-3"></i>其他信息</h4>';
+                html += '</div>';
+                html += '<div class="p-6">';
+                html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-5">';
+                
+                otherFields.forEach(key => {
+                    const value = data[key];
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const isTextarea = typeof value === 'string' && value.length > 50 || typeof value === 'object';
+                    
+                    html += `
+                        <div class="${isTextarea ? 'md:col-span-2' : ''}">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${label}</label>
+                            ${isTextarea 
+                                ? `<textarea name="${key}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none" rows="3" placeholder="请输入${label}...">${typeof value === 'object' ? JSON.stringify(value, null, 2) : value}</textarea>`
+                                : `<input type="text" name="${key}" value="${value || ''}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" placeholder="请输入${label}...">`
+                            }
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div></div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Get value from nested data object
+        function getValueFromData(data, key) {
+            if (data[key] !== undefined) return data[key];
+            if (data.extracted_data && data.extracted_data[key] !== undefined) return data.extracted_data[key];
+            return '';
+        }
+        
+        // Collect form data and convert to JSON object
+        function collectFormData() {
+            const result = {};
+            const extractedData = {};
+            
+            // Get all form inputs
+            const inputs = document.querySelectorAll('#edit-form-container input, #edit-form-container textarea');
+            
+            inputs.forEach(input => {
+                const name = input.name;
+                const value = input.value;
+                
+                if (name.startsWith('extracted_data_')) {
+                    const key = name.replace('extracted_data_', '');
+                    extractedData[key] = value;
+                } else if (name) {
+                    result[name] = value;
+                }
+            });
+            
+            // Add extracted_data if not empty
+            if (Object.keys(extractedData).length > 0) {
+                result.extracted_data = extractedData;
+            }
+            
+            return result;
         }
         
         async function saveTaskContent(taskId) {
-            const content = document.getElementById('edit-content').value;
+            let content = '';
+            
+            // Check if JSON mode is active
+            const isJsonMode = !document.getElementById('edit-form-container').classList.contains('hidden');
+            
+            if (!isJsonMode) {
+                // JSON mode - get from JSON editor
+                const jsonEditor = document.getElementById('json-editor');
+                if (jsonEditor) {
+                    try {
+                        JSON.parse(jsonEditor.value); // Validate JSON
+                        content = jsonEditor.value;
+                    } catch (e) {
+                        alert('JSON格式错误: ' + e.message);
+                        return;
+                    }
+                }
+            } else {
+                // Form mode - collect data and convert to JSON
+                const formData = collectFormData();
+                content = JSON.stringify(formData, null, 2);
+            }
             
             const response = await fetch('/api/forms/update/', {
                 method: 'POST',
@@ -1815,81 +2203,311 @@
         }
         
         function showDetailsModal(taskData) {
-            // Create and show details modal
+            console.log('showDetailsModal called with data:', taskData);
+            
+            // Parse JSON content if available
+            let llmData = null;
+            let updateData = null;
+            try {
+                llmData = taskData.llm_content ? JSON.parse(taskData.llm_content) : null;
+            } catch (e) {
+                console.error('Error parsing LLM content:', e);
+            }
+            try {
+                updateData = taskData.update_content ? JSON.parse(taskData.update_content) : null;
+            } catch (e) {
+                console.error('Error parsing update content:', e);
+            }
+
+            // Get status and progress styling
+            let statusColor = 'bg-gray-100 text-gray-800';
+            let statusIcon = 'fa-clock';
+            let statusBg = 'bg-gradient-to-r from-gray-50 to-gray-100';
+            let statusBorderColor = 'border-gray-200';
+            if (taskData.status === '完成') {
+                statusColor = 'bg-success/10 text-success';
+                statusIcon = 'fa-check-circle';
+                statusBg = 'bg-gradient-to-r from-emerald-50 to-green-50';
+                statusBorderColor = 'border-emerald-200';
+            } else if (taskData.status === '解读中') {
+                statusColor = 'bg-warning/10 text-warning';
+                statusIcon = 'fa-spinner fa-spin';
+                statusBg = 'bg-gradient-to-r from-amber-50 to-yellow-50';
+                statusBorderColor = 'border-amber-200';
+            } else if (taskData.status === '失败') {
+                statusColor = 'bg-danger/10 text-danger';
+                statusIcon = 'fa-times-circle';
+                statusBg = 'bg-gradient-to-r from-red-50 to-rose-50';
+                statusBorderColor = 'border-red-200';
+            }
+
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4';
             modal.innerHTML = `
-                <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold">任务详情 - ${taskData.task_id}</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                            <i class="fa-solid fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">任务名称</label>
-                            <p class="mt-1">${taskData.task_name}</p>
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
+                    <!-- Header with Gradient Background -->
+                    <div class="relative bg-gradient-to-br from-primary via-primary/90 to-secondary/80 px-8 py-8 border-b border-gray-100">
+                        <!-- Decorative Pattern -->
+                        <div class="absolute inset-0 opacity-10">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+                            <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-2xl"></div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">所属企业</label>
-                            <p class="mt-1">${taskData.company}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">场景类型</label>
-                            <p class="mt-1">${taskData.scene}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">任务状态</label>
-                            <p class="mt-1">${taskData.status}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">处理进度</label>
-                            <p class="mt-1">${taskData.progress}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">创建时间</label>
-                            <p class="mt-1">${taskData.create_time}</p>
+                        
+                        <!-- Header Content -->
+                        <div class="relative flex items-center justify-between">
+                            <div class="flex items-center gap-5">
+                                <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+                                    <i class="fa-solid fa-file-lines text-white text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-3xl font-bold text-white mb-1">任务详情</h3>
+                                    <p class="text-white/80 text-sm font-medium">任务ID: ${taskData.task_id}</p>
+                                </div>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl flex items-center justify-center transition-all duration-200 border border-white/30">
+                                <i class="fa-solid fa-times text-white text-xl"></i>
+                            </button>
                         </div>
                     </div>
-                    ${taskData.llm_content ? `
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">LLM解读内容</label>
-                            <pre class="bg-gray-50 p-3 rounded-lg overflow-auto max-h-96">${taskData.llm_content}</pre>
+
+                    <!-- Content with Better Spacing -->
+                    <div class="flex-1 overflow-y-auto px-8 py-8 bg-gray-50/30">
+                        <!-- Status Card -->
+                        <div class="mb-8">
+                            <div class="${statusBg} rounded-2xl p-6 border ${statusBorderColor} shadow-lg">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md">
+                                            <i class="fa-solid ${statusIcon} ${statusColor.replace('bg-', 'text-')} text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-lg font-bold text-gray-800">任务状态</h4>
+                                            <p class="text-gray-600 mt-1">当前进度: ${taskData.progress || '0%'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="${statusColor} px-5 py-3 rounded-full text-lg font-bold shadow-md">${taskData.status || '-'}</span>
+                                        <div class="mt-3 bg-white rounded-xl p-3 shadow-inner">
+                                            <div class="w-64 bg-gray-200 rounded-full h-3 overflow-hidden">
+                                                <div class="bg-gradient-to-r from-primary to-secondary h-3 rounded-full transition-all duration-700 shadow-lg" style="width: ${taskData.progress || '0%'}"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    ` : ''}
-                    ${taskData.update_content ? `
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">更新内容</label>
-                            <pre class="bg-gray-50 p-3 rounded-lg overflow-auto max-h-96">${taskData.update_content}</pre>
+
+                        <!-- Basic Info Section -->
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-5 flex items-center">
+                                <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mr-3">
+                                    <i class="fa-solid fa-info-circle text-primary text-lg"></i>
+                                </div>
+                                基础信息
+                            </h4>
+                            <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    ${[
+                                        { label: '任务名称', value: taskData.task_name || '-', icon: 'fa-tag', color: 'text-blue-600' },
+                                        { label: '所属企业', value: taskData.company || '未填写', icon: 'fa-building', color: 'text-purple-600' },
+                                        { label: '场景类型', value: taskData.scene || '-', icon: 'fa-layer-group', color: 'text-green-600' },
+                                        { label: '创建时间', value: taskData.create_time || '-', icon: 'fa-clock', color: 'text-orange-600' }
+                                    ].map(item => `
+                                        <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                                            <div class="flex items-start gap-3">
+                                                <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                                                    <i class="fa-solid ${item.icon} ${item.color}"></i>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">${item.label}</p>
+                                                    <p class="text-gray-800 font-medium truncate">${item.value}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
                         </div>
-                    ` : ''}
-                    <div class="flex justify-end">
-                        <button onclick="this.closest('.fixed').remove()" 
-                                class="px-4 py-2 border rounded-md hover:bg-gray-50">关闭</button>
+
+                        <!-- LLM Content Section -->
+                        ${llmData ? `
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-5 flex items-center">
+                                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mr-3">
+                                    <i class="fa-solid fa-robot text-blue-600 text-lg"></i>
+                                </div>
+                                AI解读结果
+                            </h4>
+                            <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 border border-blue-100 shadow-lg">
+                                ${renderLlmContent(llmData)}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Update Content Section -->
+                        ${updateData ? `
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-5 flex items-center">
+                                <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mr-3">
+                                    <i class="fa-solid fa-edit text-green-600 text-lg"></i>
+                                </div>
+                                更新后内容
+                            </h4>
+                            <div class="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl p-6 border border-green-100 shadow-lg">
+                                ${renderLlmContent(updateData)}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Raw Content (if JSON parse failed) -->
+                        ${taskData.llm_content && !llmData ? `
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-5 flex items-center">
+                                <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mr-3">
+                                    <i class="fa-solid fa-code text-gray-600 text-lg"></i>
+                                </div>
+                                原始内容
+                            </h4>
+                            <div class="bg-gray-900 rounded-2xl p-6 shadow-2xl border border-gray-700">
+                                <pre class="text-gray-100 text-sm font-mono leading-relaxed overflow-auto max-h-96">${taskData.llm_content}</pre>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Enhanced Footer -->
+                    <div class="px-8 py-6 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-2 text-sm text-gray-500">
+                                <i class="fa-solid fa-info-circle"></i>
+                                <span>最后更新: ${new Date().toLocaleString('zh-CN')}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="window.print()" class="px-5 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium border border-gray-300 shadow-sm hover:shadow-md">
+                                <i class="fa-solid fa-print mr-2"></i>打印
+                            </button>
+                            <button onclick="this.closest('.fixed').remove()" class="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium transform hover:scale-105">
+                                <i class="fa-solid fa-check mr-2"></i>关闭
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
         }
         
-        // Initial load when switching to task list page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add event listener for page switching
-            const originalSwitchPage = switchPage;
-            switchPage = function(targetId) {
-                originalSwitchPage(targetId);
+        // Helper function to render LLM content
+        function renderLlmContent(data) {
+            if (!data || typeof data !== 'object') {
+                return '<p class="text-gray-600">暂无数据</p>';
+            }
+            
+            let html = '<div class="space-y-4">';
+            
+            // Render extracted_data if exists
+            if (data.extracted_data) {
+                html += '<div class="bg-white rounded-lg p-4 border border-gray-200">';
+                html += '<h5 class="font-semibold text-gray-800 mb-3 flex items-center"><i class="fa-solid fa-database text-primary mr-2"></i>提取的数据</h5>';
+                html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
                 
-                if (targetId === 'task-list-page') {
-                    loadTaskList();
-                    pollTaskStatus();
-                } else {
-                    stopPolling();
+                for (const [key, value] of Object.entries(data.extracted_data)) {
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    html += `
+                        <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span class="text-sm font-medium text-gray-600">${label}:</span>
+                            <span class="text-sm text-gray-800 font-medium">${value || '-'}</span>
+                        </div>
+                    `;
                 }
-            };
+                
+                html += '</div></div>';
+            }
+            
+            // Render message if exists
+            if (data.message) {
+                html += `
+                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                        <h5 class="font-semibold text-gray-800 mb-2 flex items-center"><i class="fa-solid fa-comment text-primary mr-2"></i>说明信息</h5>
+                        <p class="text-gray-700">${data.message}</p>
+                    </div>
+                `;
+            }
+            
+            // Render other top-level properties
+            const otherProps = ['policy_number', 'company_name', 'scene_type', 'coverage_details', 'premium_amount'];
+            const hasOtherProps = otherProps.some(prop => data[prop]);
+            
+            if (hasOtherProps) {
+                html += '<div class="bg-white rounded-lg p-4 border border-gray-200">';
+                html += '<h5 class="font-semibold text-gray-800 mb-3 flex items-center"><i class="fa-solid fa-file-alt text-primary mr-2"></i>保单信息</h5>';
+                html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
+                
+                otherProps.forEach(prop => {
+                    if (data[prop]) {
+                        const label = prop.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        html += `
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span class="text-sm font-medium text-gray-600">${label}:</span>
+                                <span class="text-sm text-gray-800 font-medium">${data[prop]}</span>
+                            </div>
+                        `;
+                    }
+                });
+                
+                html += '</div></div>';
+            }
+            
+            // If it's a simple object, render all key-value pairs
+            if (!data.extracted_data && !data.message && !hasOtherProps) {
+                html += '<div class="bg-white rounded-lg p-4 border border-gray-200">';
+                html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
+                
+                for (const [key, value] of Object.entries(data)) {
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+                    html += `
+                        <div class="flex justify-between items-center py-2 border-b border-gray-100 ${typeof value === 'object' ? 'md:col-span-2' : ''}">
+                            <span class="text-sm font-medium text-gray-600">${label}:</span>
+                            <span class="text-sm text-gray-800 font-medium ${typeof value === 'object' ? 'text-left' : ''}">${displayValue || '-'}</span>
+                        </div>
+                    `;
+                }
+                
+                html += '</div></div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        // Initial load when switching to task list page
+        // 7. 页面初始化 - 在DOM加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 添加页面切换监听
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const target = mutation.target;
+                        if (target.id === 'task-list-page' && !target.classList.contains('hidden')) {
+                            loadTaskList();
+                        }
+                    }
+                });
+            });
+            
+            // 监听所有页面
+            document.querySelectorAll('.page-content').forEach(page => {
+                observer.observe(page, { attributes: true });
+            });
+            
+            // 初始加载检查
+            if (document.getElementById('task-list-page').classList.contains('hidden') === false) {
+                loadTaskList();
+            }
         });
 
-        // 7. BadCase分析图表初始化
+        // 8. BadCase分析图表初始化
         function initBadCaseCharts() {
             // 1. BadCase场景分布饼图
             const badcaseSceneChart = echarts.init(document.getElementById('badcase-scene-chart'));

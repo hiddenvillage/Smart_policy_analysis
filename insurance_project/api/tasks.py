@@ -2,6 +2,7 @@
 Celery tasks for async processing
 """
 import json
+import requests
 import time
 import random
 import logging
@@ -41,6 +42,20 @@ def process_interpretation_task(self, task_id, task_name, company, scene, pdf_pa
             # Simulate occasional errors (5% chance)
             if random.random() < 0.05:
                 raise Exception(f"Simulated processing error at step {step}")
+
+        url = "https://123.249.99.67/v1/9d8696d1f5b94a4799b76cc5f4edca85/workflows/20d85d0e-20bf-4996-ac8b-1e331e024b90/conversations/0ed1f68a-4331-418e-ac00-fa3f0f82e4af?version=1765525941689"
+
+        payload = json.dumps({
+            "query": "你好"
+        }, ensure_ascii=False)
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': get_valid_token()
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload.encode("utf-8"))
+        print(response)
+        print(response.text)
         
         # Generate mock interpretation result
         result = {
@@ -119,3 +134,48 @@ def process_interpretation_task(self, task_id, task_name, company, scene, pdf_pa
         # Log final failure
         logger.error(f"Task {task_id} failed after {self.max_retries} retries")
         raise exc
+
+
+def get_valid_token():
+    """
+    获取有效的IAM Token（内部方法）
+    """
+
+    auth_url = "https://iam.myhuaweicloud.com/v3/auth/tokens"
+    payload = {
+        "auth": {
+            "identity": {
+                "methods": ["password"],
+                "password": {
+                    "user": {
+                        "domain": {"name": "IntelligentEliteTeam"},
+                        "name": "trainee46",
+                        "password": "Huawei@trainee**"
+                    }
+                }
+            },
+            "scope": {
+                "project": {
+                    "name": "cn-north-4",
+                    "domain": {"name": "IntelligentEliteTeam"}
+                }
+            }
+        }
+    }
+
+    try:
+        resp = requests.post(
+            auth_url,
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            verify=False,
+            timeout=30,
+            proxies={"http": None, "https": None}
+        )
+        resp.raise_for_status()
+        token = resp.headers.get("X-Subject-Token")
+        print("token", token)
+        return token if token and len(token) > 100 else None
+    except Exception as e:
+        print(f"❌ Token获取失败：{str(e)}")
+        return None

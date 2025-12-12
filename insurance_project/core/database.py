@@ -5,7 +5,7 @@ import pymysql
 import logging
 import configparser
 import os
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Tuple, Union
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,19 @@ class DatabaseConnection:
     def connect(self) -> None:
         """Establish database connection"""
         try:
+            # Use DictCursor to get results as dictionaries
+            self.config['cursorclass'] = pymysql.cursors.DictCursor
+            # Ensure charset is set to utf8mb4 for proper Chinese character support
+            self.config['charset'] = 'utf8mb4'
+            self.config['autocommit'] = True
             self.connection = pymysql.connect(**self.config)
+            
+            # Set connection charset after connecting
+            with self.connection.cursor() as cursor:
+                cursor.execute("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci")
+                cursor.execute("SET CHARACTER SET utf8mb4")
+                cursor.execute("SET character_set_connection=utf8mb4")
+            
             logger.info("Database connection established successfully")
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
@@ -108,14 +120,30 @@ class DatabaseConnection:
         finally:
             cursor.close()
     
-    def execute_query(self, sql: str, params: Optional[Tuple] = None) -> List[Dict[str, Any]]:
+    def execute_query(self, sql: str, params: Optional[Union[Tuple, Dict]] = None) -> List[Dict[str, Any]]:
         """Execute SELECT query and return results"""
         try:
             with self.cursor() as cursor:
                 cursor.execute(sql, params)
+                # With DictCursor, fetchall() returns a list of dictionaries
                 return cursor.fetchall()
         except Exception as e:
             logger.error(f"Query execution failed: {e}")
+            logger.error(f"SQL: {sql}")
+            logger.error(f"Params: {params}")
+            raise
+    
+    def execute_query_one(self, sql: str, params: Optional[Union[Tuple, Dict]] = None) -> Optional[Dict[str, Any]]:
+        """Execute SELECT query and return single result"""
+        try:
+            with self.cursor() as cursor:
+                cursor.execute(sql, params)
+                # With DictCursor, fetchone() returns a dictionary
+                return cursor.fetchone()
+        except Exception as e:
+            logger.error(f"Query execution failed: {e}")
+            logger.error(f"SQL: {sql}")
+            logger.error(f"Params: {params}")
             raise
     
     def execute_update(self, sql: str, params: Optional[Tuple] = None) -> int:
