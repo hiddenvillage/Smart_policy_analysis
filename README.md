@@ -61,7 +61,7 @@ CREATE DATABASE insurance_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ### 4. 初始化数据库表
 
 ```bash
-python manage.py init_db
+python3 manage.py init_db
 ```
 
 或运行初始化脚本：
@@ -75,13 +75,13 @@ python init_database.py
 方式一：使用Django命令
 
 ```bash
-python manage.py runserver 0.0.0.0:8000
+python3 manage.py runserver 0.0.0.0:8081
 ```
 
 方式二：使用一键启动脚本（自动初始化数据库）
 
 ```bash
-python run_server.py
+python3 run_server.py
 ```
 
 ### 6. 启动Celery（可选，用于异步处理）

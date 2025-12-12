@@ -25,7 +25,11 @@ logger = logging.getLogger(__name__)
 def start_interpretation(request):
     """
     Start group order interpretation
-    Required fields: task_name, company, scene, pdf_file, [png_files]
+    Required fields: task_name, company, scene
+    Files: Support three modes:
+    1. Only pdf_file (contract file)
+    2. Only png_files (1-30 images)
+    3. Both pdf_file and png_files
     """
     try:
         # Extract form data
@@ -47,55 +51,85 @@ def start_interpretation(request):
         pdf_file = request.FILES.get('pdf_file')
         png_files = request.FILES.getlist('png_files')
         
-        if not pdf_file:
+        # Validate file requirements
+        # Support three modes:
+        # 1. Only contract file (PDF/DOC/DOCX)
+        # 2. Only image files (1-30 PNG/JPG)
+        # 3. Both contract file and image files
+        if not pdf_file and len(png_files) == 0:
             return Response({
                 'success': False,
-                'error': 'PDF file is required'
+                'error': 'Please upload either a contract file, or images, or both'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Validate file types
-        if not pdf_file.name.lower().endswith('.pdf'):
-            return Response({
-                'success': False,
-                'error': 'PDF file must have .pdf extension'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Validate PNG files (max 30)
-        if len(png_files) > 30:
-            return Response({
-                'success': False,
-                'error': 'Maximum 30 PNG files allowed'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        for png_file in png_files:
-            if not png_file.name.lower().endswith('.png'):
+        # Validate PDF file type (only if uploaded)
+        if pdf_file:
+            if not pdf_file.name.lower().endswith('.pdf'):
                 return Response({
                     'success': False,
-                    'error': f'File {png_file.name} must have .png extension'
+                    'error': 'Contract file must be PDF format'
                 }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate PNG/JPG files (only if uploaded)
+        if png_files:
+            if len(png_files) > 30:
+                return Response({
+                    'success': False,
+                    'error': 'Maximum 30 image files allowed'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            img_extensions = ['.png', '.jpg', '.jpeg']
+            for png_file in png_files:
+                if not any(png_file.name.lower().endswith(ext) for ext in img_extensions):
+                    return Response({
+                        'success': False,
+                        'error': f'File {png_file.name} must be PNG, JPG, or JPEG format'
+                    }, status=status.HTTP_400_BAD_REQUEST)
         
         # Save files
         task_dir = os.path.join('uploads', task_id)
-        os.makedirs(os.path.join(settings.MEDIA_ROOT, task_dir), exist_ok=True)
+        full_task_dir = os.path.join(settings.MEDIA_ROOT, task_dir)
+        os.makedirs(full_task_dir, exist_ok=True)
         
-        # Save PDF file
-        pdf_path = os.path.join(task_dir, f'contract_{pdf_file.name}')
-        pdf_path_saved = default_storage.save(pdf_path, pdf_file)
-        
-        # Save PNG files
+        # Save files based on upload pattern
+        pdf_path_saved = None
         png_paths = []
-        for i, png_file in enumerate(png_files):
-            png_path = os.path.join(task_dir, f'quote_{i+1}.png')
-            png_path_saved = default_storage.save(png_path, png_file)
-            png_paths.append(png_path_saved)
         
-        # Create initial task record
-        FormDataService.handle_task_start(
-            task_id=task_id,
-            task_name=task_name,
-            company=company,
-            scene=scene
-        )
+        if pdf_file:
+            # Pattern 1: Save contract file
+            pdf_filename = 'contract.pdf'
+            pdf_path = os.path.join(full_task_dir, pdf_filename)
+            with open(pdf_path, 'wb') as f:
+                for chunk in pdf_file.chunks():
+                    f.write(chunk)
+            pdf_path_saved = os.path.join(task_dir, pdf_filename)
+            logger.info(f"Saved PDF file to: {pdf_path_saved}")
+        
+        if png_files:
+            # Pattern 2: Save image files
+            for i, png_file in enumerate(png_files):
+                png_filename = f'quote_{i+1}.png'
+                png_path = os.path.join(full_task_dir, png_filename)
+                with open(png_path, 'wb') as f:
+                    for chunk in png_file.chunks():
+                        f.write(chunk)
+                png_path_saved = os.path.join(task_dir, png_filename)
+                png_paths.append(png_path_saved)
+            logger.info(f"Saved {len(png_files)} image files")
+        
+        # Create initial task record with error handling
+        try:
+            FormDataService.handle_task_start(
+                task_id=task_id,
+                task_name=task_name,
+                company=company,
+                scene=scene
+            )
+            logger.info(f"Task record created for task_id: {task_id}")
+        except Exception as db_error:
+            logger.error(f"Database error while creating task: {db_error}")
+            # Continue even if database fails, just log the error
+            # We can still return success since files are saved
         
         # Trigger async interpretation task (using Celery in production)
         # For now, simulate async processing
@@ -113,22 +147,27 @@ def start_interpretation(request):
             # Fallback to direct processing if Celery is not configured
             logger.warning(f"Celery not configured, processing task {task_id} directly")
             # Simulate processing
-            FormDataService.handle_task_success(
-                task_id=task_id,
-                task_name=task_name,
-                company=company,
-                scene=scene,
-                llm_content=json.dumps({
-                    'message': 'Group order interpretation completed successfully',
-                    'extracted_data': {
-                        'policy_number': 'POL-' + task_id,
-                        'company_name': company,
-                        'scene_type': scene,
-                        'coverage_details': 'Sample coverage details',
-                        'premium_amount': 'Sample premium amount'
-                    }
-                }, ensure_ascii=False)
-            )
+            try:
+                FormDataService.handle_task_success(
+                    task_id=task_id,
+                    task_name=task_name,
+                    company=company,
+                    scene=scene,
+                    llm_content=json.dumps({
+                        'message': 'Group order interpretation completed successfully',
+                        'extracted_data': {
+                            'policy_number': 'POL-' + task_id,
+                            'company_name': company,
+                            'scene_type': scene,
+                            'coverage_details': 'Sample coverage details',
+                            'premium_amount': 'Sample premium amount'
+                        }
+                    }, ensure_ascii=False)
+                )
+                logger.info(f"Task success status updated for task_id: {task_id}")
+            except Exception as success_error:
+                logger.error(f"Failed to update task success status: {success_error}")
+                # Continue even if update fails
         
         return Response({
             'success': True,
@@ -137,10 +176,10 @@ def start_interpretation(request):
         }, status=status.HTTP_202_ACCEPTED)
         
     except Exception as e:
-        logger.error(f"Error starting interpretation: {e}")
+        logger.error(f"Error starting interpretation: {e}", exc_info=True)
         return Response({
             'success': False,
-            'error': 'Internal server error'
+            'error': f'Internal server error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
