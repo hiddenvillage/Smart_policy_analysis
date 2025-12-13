@@ -1,18 +1,18 @@
 """
-Celery tasks for async processing
+Async tasks for processing
 """
 import json
 import requests
 import time
 import random
 import logging
-from celery import shared_task
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from insurance_project.core.form_service import FormDataService
 
 logger = logging.getLogger(__name__)
 
-@shared_task(bind=True, max_retries=3)
-def process_interpretation_task(self, task_id, task_name, company, scene, pdf_path, png_paths):
+async def process_interpretation_async(task_id, task_name, company, scene, pdf_path, png_paths):
     """
     Process group order interpretation asynchronously
     """
@@ -23,7 +23,7 @@ def process_interpretation_task(self, task_id, task_name, company, scene, pdf_pa
         total_steps = 10
         for step in range(1, total_steps + 1):
             # Simulate processing time
-            time.sleep(random.uniform(1, 3))
+            await asyncio.sleep(random.uniform(1, 3))
             
             # Calculate progress
             progress = f"{int((step / total_steps) * 100)}%"
@@ -43,19 +43,12 @@ def process_interpretation_task(self, task_id, task_name, company, scene, pdf_pa
             if random.random() < 0.05:
                 raise Exception(f"Simulated processing error at step {step}")
 
-        url = "https://123.249.99.67/v1/9d8696d1f5b94a4799b76cc5f4edca85/workflows/20d85d0e-20bf-4996-ac8b-1e331e024b90/conversations/0ed1f68a-4331-418e-ac00-fa3f0f82e4af?version=1765525941689"
-
-        payload = json.dumps({
-            "query": "你好"
-        }, ensure_ascii=False)
-        headers = {
-            'Content-Type': 'application/json',
-            'X-Auth-Token': get_valid_token()
-        }
-
-        response = requests.request("POST", url, headers=headers, data=payload.encode("utf-8"))
-        print(response)
-        print(response.text)
+        # Run the blocking HTTP request in a thread pool
+        loop = asyncio.get_event_loop()
+        result_data = await loop.run_in_executor(
+            None, 
+            lambda: _make_llm_request()
+        )
         
         # Generate mock interpretation result
         result = {
@@ -63,7 +56,7 @@ def process_interpretation_task(self, task_id, task_name, company, scene, pdf_pa
             'task_name': task_name,
             'company': company,
             'scene': scene,
-            'interpretation_result': {
+            'interpretation_result': result_data if result_data else {
                 'policy_info': {
                     'policy_number': f'POL-{task_id}',
                     'policy_type': scene,
@@ -111,29 +104,88 @@ def process_interpretation_task(self, task_id, task_name, company, scene, pdf_pa
         return result
         
     except Exception as exc:
-        logger.error(f"Task {task_id} failed: {exc}")
+        # Detailed error logging with stack trace
+        import traceback
+        error_details = traceback.format_exc()
+        
+        # Log comprehensive failure information
+        logger.error(f"""
+        ==================== Task Failure Details ====================
+        Task ID: {task_id}
+        Task Name: {task_name}
+        Company: {company}
+        Scene: {scene}
+        PDF Path: {pdf_path}
+        PNG Paths: {png_paths}
+        Error Type: {type(exc).__name__}
+        Error Message: {str(exc)}
+        Current Step: {locals().get('step', 'N/A')} / {locals().get('total_steps', 'N/A')}
+        Progress: {f"{int((locals().get('step', 0) / locals().get('total_steps', 1)) * 100)}%" if 'total_steps' in locals() else "0%"}
+        
+        Stack Trace:
+        {error_details}
+        ==================== End of Failure Details ===================
+        """)
         
         # Calculate current progress
         current_step = locals().get('step', 0)
         progress = f"{int((current_step / total_steps) * 100)}%" if 'total_steps' in locals() else "0%"
         
         # Mark task as failed
-        FormDataService.handle_task_error(
-            task_id=task_id,
-            task_name=task_name,
-            company=company,
-            scene=scene,
-            progress=progress
-        )
-        
-        # Retry if retry attempts available
-        if self.request.retries < self.max_retries:
-            logger.info(f"Retrying task {task_id}, attempt {self.request.retries + 1}")
-            raise self.retry(countdown=60 * (2 ** self.request.retries), exc=exc)
+        try:
+            FormDataService.handle_task_error(
+                task_id=task_id,
+                task_name=task_name,
+                company=company,
+                scene=scene,
+                progress=progress
+            )
+            logger.info(f"Task {task_id} error status updated in database")
+        except Exception as db_error:
+            logger.error(f"Failed to update task error status in database: {db_error}")
         
         # Log final failure
-        logger.error(f"Task {task_id} failed after {self.max_retries} retries")
+        logger.error(f"Task {task_id} processing failed with error: {type(exc).__name__} - {str(exc)}")
         raise exc
+
+
+def _make_llm_request():
+    """
+    Make HTTP request to LLM service
+    """
+    try:
+        url = "https://123.249.99.67/v1/9d8696d1f5b94a4799b76cc5f4edca85/workflows/20d85d0e-20bf-4996-ac8b-1e331e024b90/conversations/0ed1f68a-4331-418e-ac00-fa3f0f82e4af?version=1765525941689"
+
+        payload = json.dumps({
+            "query": "你好"
+        }, ensure_ascii=False)
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': get_valid_token()
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload.encode("utf-8"), verify=False)
+        print(response)
+        print(response.text)
+        
+        # Parse JSON response if available
+        if response.text:
+            try:
+                return response.json()
+            except json.JSONDecodeError:
+                return None
+        return None
+    except Exception as e:
+        logger.error(f"""
+        ==================== LLM Request Failed ====================
+        Error: {str(e)}
+        Error Type: {type(e).__name__}
+        URL: {url if 'url' in locals() else 'N/A'}
+        Request Body: {payload if 'payload' in locals() else 'N/A'}
+        ==================== End of LLM Error ====================
+        """)
+        print(f"LLM request failed: {e}")
+        return None
 
 
 def get_valid_token():

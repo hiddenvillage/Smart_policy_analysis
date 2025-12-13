@@ -5,6 +5,7 @@ import uuid
 import os
 import json
 import logging
+import asyncio
 from datetime import datetime
 from django.conf import settings
 from django.http import JsonResponse
@@ -14,6 +15,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.http import HttpResponse
 
 from insurance_project.core.form_service import FormDataService
 
@@ -130,22 +132,37 @@ def start_interpretation(request):
             # Continue even if database fails, just log the error
             # We can still return success since files are saved
         
-        # Trigger async interpretation task (using Celery in production)
-        # For now, simulate async processing
+        # Trigger async interpretation task using Python's native async
         try:
-            from insurance_project.api.tasks import process_interpretation_task
-            process_interpretation_task.delay(
-                task_id=task_id,
-                task_name=task_name,
-                company=company,
-                scene=scene,
-                pdf_path=pdf_path_saved,
-                png_paths=png_paths
-            )
-        except ImportError:
-            # Fallback to direct processing if Celery is not configured
-            logger.warning(f"Celery not configured, processing task {task_id} directly")
-            # Simulate processing
+            from insurance_project.api.tasks import process_interpretation_async
+            
+            # Run async task in background thread to avoid blocking the response
+            import threading
+            
+            def run_async_task():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(process_interpretation_async(
+                        task_id=task_id,
+                        task_name=task_name,
+                        company=company,
+                        scene=scene,
+                        pdf_path=pdf_path_saved,
+                        png_paths=png_paths
+                    ))
+                finally:
+                    loop.close()
+            
+            # Start the task in a background thread
+            thread = threading.Thread(target=run_async_task, daemon=True)
+            thread.start()
+            
+            logger.info(f"Async task {task_id} started in background thread")
+            
+        except Exception as task_error:
+            logger.error(f"Failed to start async task {task_id}: {task_error}")
+            # Fallback to direct processing if async fails
             try:
                 FormDataService.handle_task_success(
                     task_id=task_id,

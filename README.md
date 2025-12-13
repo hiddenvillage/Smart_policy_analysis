@@ -18,7 +18,7 @@
 
 3. **技术特点**
    - 使用PyMySQL替代Django原生ORM
-   - 异步任务处理（Celery）
+   - Python原生异步任务处理（asyncio）
    - RESTful API设计
    - 响应式前端界面
 
@@ -26,7 +26,8 @@
 
 - Python 3.8+
 - MySQL 5.7+
-- Redis (用于Celery)
+
+**注意：** 本项目使用Python内置的asyncio进行异步处理，不再需要Redis和Celery。
 
 ## 安装步骤
 
@@ -84,15 +85,15 @@ python3 manage.py runserver 0.0.0.0:8081
 python3 run_server.py
 ```
 
-### 6. 启动Celery（可选，用于异步处理）
+### 6. 验证安装（可选）
+
+运行测试脚本验证异步处理功能是否正常：
 
 ```bash
-# 启动Celery Worker
-celery -A insurance_project worker -l info
-
-# 启动Celery Beat（如果需要定时任务）
-celery -A insurance_project beat -l info
+python test_async_implementation.py
 ```
+
+**注意：** 异步任务会在后台线程中自动执行，无需手动启动额外的服务。
 
 ## API接口
 
@@ -222,7 +223,7 @@ Smart_policy_analysis/
 │   │   ├── apps.py
 │   │   ├── views.py           # API视图
 │   │   ├── urls.py            # API路由
-│   │   └── tasks.py           # Celery异步任务
+│   │   └── tasks.py           # 异步任务模块
 │   ├── templates/             # HTML模板
 │   │   └── index.html         # 主页面
 │   └── static/                # 静态文件
@@ -230,6 +231,7 @@ Smart_policy_analysis/
 ├── manage.py                  # Django管理脚本
 ├── init_database.py          # 数据库初始化脚本
 ├── run_server.py             # 一键启动脚本
+├── test_async_implementation.py # 异步功能测试脚本
 ├── requirements.txt          # Python依赖
 ├── base.html                 # UI参考文件
 └── README.md                 # 项目说明
@@ -249,8 +251,9 @@ Smart_policy_analysis/
    - 创建数据库用户并授权
 
 3. **异步处理**
-   - 如果不使用Celery，任务会同步处理
-   - 建议生产环境使用Celery提高性能
+   - 使用Python内置的asyncio进行异步任务处理
+   - 异步任务在后台线程中执行，不阻塞主线程
+   - LLM返回的JSON数据会自动保存到llm_content字段
 
 ## 故障排除
 
@@ -266,5 +269,5 @@ Smart_policy_analysis/
 
 3. **任务处理失败**
    - 查看Django日志
-   - 检查Celery状态（如果使用）
-   - 确认Redis连接（如果使用）
+   - 检查异步任务执行状态
+   - 运行测试脚本验证异步功能
